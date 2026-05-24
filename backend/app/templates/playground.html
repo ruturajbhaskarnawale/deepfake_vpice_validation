@@ -1,0 +1,2346 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jodetx Sentinel Core — Forensic Playground</title>
+    <!-- Google Fonts Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-color: #030712;
+            --card-bg: rgba(17, 24, 39, 0.7);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --accent-cyan: #06b6d4;
+            --accent-purple: #8b5cf6;
+            --accent-red: #ef4444;
+            --accent-green: #10b981;
+            --accent-orange: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at 50% 0%, #111827 0%, #030712 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        header {
+            backdrop-filter: blur(16px);
+            background: rgba(3, 7, 18, 0.6);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1.25rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            width: 2.25rem;
+            height: 2.25rem;
+            border-radius: 0.5rem;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 1.2rem;
+            color: #ffffff;
+        }
+
+        .logo-text h1 {
+            font-size: 1.1rem;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+            background: linear-gradient(to right, #ffffff, #9ca3af);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo-text p {
+            font-size: 0.65rem;
+            color: var(--accent-cyan);
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        .api-key-badge {
+            background: rgba(6, 182, 212, 0.08);
+            border: 1px solid rgba(6, 182, 212, 0.2);
+            color: var(--accent-cyan);
+            font-size: 0.75rem;
+            padding: 0.35rem 0.75rem;
+            border-radius: 9999px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .api-key-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--accent-cyan);
+            box-shadow: 0 0 8px var(--accent-cyan);
+        }
+
+        main {
+            flex: 1;
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 2rem;
+        }
+
+        .glass-card {
+            backdrop-filter: blur(16px);
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .glass-card:hover {
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        .card-header h2 {
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #ffffff;
+        }
+
+        .card-header p {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .input-text {
+            background: rgba(3, 7, 18, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .input-text:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 10px rgba(6, 182, 212, 0.15);
+        }
+
+        .dropzone {
+            border: 2px dashed rgba(255, 255, 255, 0.15);
+            border-radius: 0.75rem;
+            padding: 2rem 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(3, 7, 18, 0.3);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .dropzone:hover,
+        .dropzone.dragover {
+            border-color: var(--accent-cyan);
+            background: rgba(6, 182, 212, 0.03);
+        }
+
+        .dropzone-icon {
+            font-size: 2rem;
+            color: var(--text-secondary);
+            transition: transform 0.3s ease;
+        }
+
+        .dropzone:hover .dropzone-icon {
+            transform: translateY(-4px);
+            color: var(--accent-cyan);
+        }
+
+        .dropzone p {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .dropzone span {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+
+        .file-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .file-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 0.35rem;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.75rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .file-item-name {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-remove-btn {
+            background: none;
+            border: none;
+            color: var(--accent-red);
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .btn-submit {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            color: #ffffff;
+            border: none;
+            border-radius: 0.5rem;
+            padding: 0.85rem;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.2);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(139, 92, 246, 0.35);
+            opacity: 0.95;
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Results view panel */
+        .workspace-area {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .console-panel {
+            background: #02040a;
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: #38bdf8;
+            height: 180px;
+            overflow-y: auto;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .console-line {
+            line-height: 1.4;
+        }
+
+        .console-line.success {
+            color: var(--accent-green);
+        }
+
+        .console-line.warning {
+            color: var(--accent-orange);
+        }
+
+        .console-line.error {
+            color: var(--accent-red);
+        }
+
+        .telemetry-grid {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 2rem;
+            flex: 1;
+        }
+
+        .composite-risk-card {
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .risk-gauge-container {
+            position: relative;
+            width: 140px;
+            height: 140px;
+            margin: 1rem 0;
+        }
+
+        .risk-gauge-svg {
+            transform: rotate(-90deg);
+            width: 140px;
+            height: 140px;
+        }
+
+        .gauge-background {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.05);
+            stroke-width: 10;
+        }
+
+        .gauge-fill {
+            fill: none;
+            stroke: url(#cyan-purple-grad);
+            stroke-width: 10;
+            stroke-dasharray: 408;
+            stroke-dashoffset: 408;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 1s ease-in-out;
+        }
+
+        .gauge-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .risk-score-value {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #ffffff;
+        }
+
+        .risk-score-label {
+            font-size: 0.6rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .risk-badge {
+            padding: 0.35rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0.5rem;
+        }
+
+        .risk-badge.low {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: var(--accent-green);
+        }
+
+        .risk-badge.medium {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            color: var(--accent-orange);
+        }
+
+        .risk-badge.high {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: var(--accent-red);
+        }
+
+        .risk-badge.critical {
+            background: rgba(239, 68, 68, 0.2);
+            border: 2px solid var(--accent-red);
+            color: var(--accent-red);
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.25);
+        }
+
+        .evidence-tabs-card {
+            flex: 1;
+        }
+
+        .tabs-header {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            gap: 1.5rem;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding-bottom: 0.75rem;
+            cursor: pointer;
+            position: relative;
+            transition: color 0.3s ease;
+        }
+
+        .tab-btn.active {
+            color: #ffffff;
+        }
+
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(to right, var(--accent-cyan), var(--accent-purple));
+        }
+
+        .tab-content {
+            display: none;
+            flex-direction: column;
+            gap: 1rem;
+            height: 320px;
+            overflow-y: auto;
+            padding-top: 0.5rem;
+        }
+
+        .tab-content.active {
+            display: flex;
+        }
+
+        .signals-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .signal-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .signal-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .signal-category {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: -0.01em;
+        }
+
+        .signal-severity {
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        .signal-severity.critical {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--accent-red);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+        }
+
+        .signal-severity.high {
+            background: rgba(239, 68, 68, 0.08);
+            color: var(--accent-red);
+            border: 1px solid rgba(239, 68, 68, 0.15);
+        }
+
+        .signal-severity.medium {
+            background: rgba(245, 158, 11, 0.08);
+            color: var(--accent-orange);
+            border: 1px solid rgba(245, 158, 11, 0.15);
+        }
+
+        .signal-severity.low {
+            background: rgba(16, 185, 129, 0.08);
+            color: var(--accent-green);
+            border: 1px solid rgba(16, 185, 129, 0.15);
+        }
+
+        .signal-desc {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .signal-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            border-top: 1px solid rgba(255, 255, 255, 0.04);
+            padding-top: 0.5rem;
+            margin-top: 0.25rem;
+        }
+
+        .signal-payload-toggle {
+            color: var(--accent-cyan);
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .ocr-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .ocr-field {
+            background: rgba(255, 255, 255, 0.01);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+        }
+
+        .ocr-field-label {
+            font-size: 0.6rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+        }
+
+        .ocr-field-value {
+            font-size: 0.8rem;
+            color: #ffffff;
+            font-weight: 600;
+            margin-top: 0.25rem;
+        }
+
+        .audit-timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            padding-left: 0.5rem;
+            position: relative;
+        }
+
+        .audit-timeline::before {
+            content: '';
+            position: absolute;
+            left: 11px;
+            top: 4px;
+            bottom: 4px;
+            width: 1px;
+            background: var(--border-color);
+        }
+
+        .audit-item {
+            display: flex;
+            gap: 1rem;
+            position: relative;
+        }
+
+        .audit-node {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: var(--accent-cyan);
+            box-shadow: 0 0 6px var(--accent-cyan);
+            margin-top: 4px;
+            z-index: 1;
+            margin-left: 2px;
+        }
+
+        .audit-content {
+            flex: 1;
+        }
+
+        .audit-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .audit-desc {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            margin-top: 0.15rem;
+            line-height: 1.4;
+        }
+
+        .empty-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            gap: 0.5rem;
+            height: 100%;
+            text-align: center;
+            padding: 3rem;
+        }
+
+        .empty-placeholder-icon {
+            font-size: 3rem;
+            opacity: 0.3;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 9999px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Debug Assets styling */
+        .assets-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 1rem;
+            width: 100%;
+        }
+
+        .asset-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            align-items: center;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .asset-card:hover {
+            border-color: var(--accent-cyan);
+            transform: translateY(-2px);
+            background: rgba(6, 182, 212, 0.02);
+        }
+
+        .asset-title {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-align: center;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            width: 100%;
+        }
+
+        .asset-media {
+            width: 100%;
+            height: 100px;
+            object-fit: contain;
+            border-radius: 0.5rem;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .asset-badge {
+            font-size: 0.6rem;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            background: rgba(6, 182, 212, 0.08);
+            border: 1px solid rgba(6, 182, 212, 0.2);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .ocr-section {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .ocr-section-title {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+
+        .ocr-text-pane {
+            background: #02040a;
+            color: #f1f5f9;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            white-space: pre-wrap;
+            overflow-y: auto;
+            max-height: 240px;
+            line-height: 1.4;
+            text-align: left;
+            margin: 0;
+        }
+
+        .ocr-json-pane {
+            background: #02040a;
+            color: #a5f3fc;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            white-space: pre-wrap;
+            overflow-y: auto;
+            max-height: 240px;
+            line-height: 1.4;
+            text-align: left;
+            margin: 0;
+        }
+
+        .btn-capture-row {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 0.5rem;
+        }
+
+        .btn-capture {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            font-weight: 600;
+            font-size: 0.8rem;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-capture:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(6, 182, 212, 0.4);
+            color: #ffffff;
+            box-shadow: 0 0 12px rgba(6, 182, 212, 0.15);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(3, 7, 18, 0.85);
+            backdrop-filter: blur(12px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            animation: modalFadeIn 0.25s ease forwards;
+        }
+
+        .modal-content {
+            background: rgba(17, 24, 39, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 1.25rem;
+            padding: 2rem;
+            width: 90%;
+            max-width: 520px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 40px rgba(139, 92, 246, 0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            position: relative;
+            animation: modalScaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes modalScaleIn {
+            from {
+                transform: scale(0.96);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            padding-bottom: 0.75rem;
+        }
+
+        .modal-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: color 0.2s;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: var(--accent-red);
+        }
+
+        .webcam-container {
+            width: 100%;
+            aspect-ratio: 4/3;
+            background: #02040a;
+            border-radius: 0.75rem;
+            overflow: hidden;
+            position: relative;
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .webcam-preview {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background: #000;
+        }
+
+        .webcam-preview.mirrored {
+            transform: scaleX(-1);
+        }
+
+        .recording-pulse {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(3, 7, 18, 0.75);
+            backdrop-filter: blur(4px);
+            padding: 0.35rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #ffffff;
+            z-index: 10;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-red);
+            animation: pulseAnimation 1s infinite alternate;
+        }
+
+        @keyframes pulseAnimation {
+            from {
+                transform: scale(0.85);
+                opacity: 0.4;
+            }
+
+            to {
+                transform: scale(1.2);
+                opacity: 1;
+            }
+        }
+
+        .audio-visualizer-container {
+            width: 100%;
+            height: 120px;
+            background: rgba(3, 7, 18, 0.6);
+            border-radius: 0.75rem;
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            padding: 0 1.5rem;
+            overflow: hidden;
+        }
+
+        .audio-bar {
+            width: 6px;
+            height: 8%;
+            background: linear-gradient(to top, var(--accent-cyan), var(--accent-purple));
+            border-radius: 9999px;
+            transition: height 0.05s ease;
+        }
+
+        .timer-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.75rem;
+            font-weight: 500;
+            text-align: center;
+            color: #ffffff;
+            letter-spacing: -0.02em;
+        }
+
+        .controls-row {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: stretch;
+            width: 100%;
+        }
+
+        .controls-row .btn-submit {
+            flex: 1;
+        }
+
+        /* Mobile Responsiveness Rules */
+        @media (max-width: 1024px) {
+            main {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+                padding: 1.5rem 1rem;
+            }
+
+            .telemetry-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+        }
+
+        @media (max-width: 640px) {
+            header {
+                padding: 1rem;
+                flex-direction: column;
+                gap: 0.75rem;
+                align-items: flex-start;
+            }
+
+            .api-key-badge {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .ocr-grid {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+
+            .btn-capture-row {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .btn-capture {
+                width: 100%;
+            }
+
+            .glass-card {
+                padding: 1rem;
+            }
+
+            .tabs-header {
+                overflow-x: auto;
+                white-space: nowrap;
+                padding-bottom: 0.25rem;
+                gap: 1rem;
+            }
+
+            .tab-btn {
+                padding-bottom: 0.5rem;
+            }
+
+            .tab-content {
+                height: auto;
+                min-height: 250px;
+                max-height: 400px;
+            }
+
+            .console-panel {
+                height: 150px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="logo-container">
+            <div class="logo-icon">J</div>
+            <div class="logo-text">
+                <h1>JODETX SENTINEL</h1>
+                <p>Trust Intelligence platform</p>
+            </div>
+        </div>
+        <div id="connectionStatus" class="api-key-badge">
+            <div class="api-key-dot"></div>
+            NIM Local Fallback Active
+        </div>
+    </header>
+
+    <main>
+        <!-- Left configuration panel -->
+        <div class="glass-card">
+            <div class="card-header">
+                <h2>📁 Ingestion Hub</h2>
+                <p>Upload files to trigger multi-modal deepfake detection.</p>
+            </div>
+
+            <div class="form-group">
+                <label for="apiKeyInput">Sentinel Client API Key</label>
+                <input type="password" id="apiKeyInput" class="input-text" value="sentinel_dev_key_2026_top_secret"
+                    placeholder="Enter x-api-key">
+            </div>
+
+            <div class="form-group">
+                <label>Media Dropzone</label>
+                <div id="dropzone" class="dropzone">
+                    <div class="dropzone-icon">📥</div>
+                    <p>Drag & drop files or tap to upload</p>
+                    <span>PDF, JPG, PNG, WAV, MP3, MP4</span>
+                    <input type="file" id="fileInput" multiple style="display: none;">
+                </div>
+                <div class="btn-capture-row">
+                    <button type="button" id="recordAudioBtn" class="btn-capture">
+                        <span>🎙️ Record Voice</span>
+                    </button>
+                    <button type="button" id="recordVideoBtn" class="btn-capture">
+                        <span>🎥 Record Video</span>
+                    </button>
+                </div>
+
+                <!-- Mandatory Inputs Forensic Guide -->
+                <div class="forensic-guide-box"
+                    style="margin-top: 0.75rem; background: rgba(6, 182, 212, 0.04); border: 1px dashed rgba(6, 182, 212, 0.25); border-radius: 0.75rem; padding: 0.75rem 1rem; font-size: 0.72rem; color: var(--text-secondary); line-height: 1.5; text-align: left;">
+                    <span
+                        style="font-weight: 700; color: var(--accent-cyan); display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.35rem; text-transform: uppercase; font-size: 0.65rem; letter-spacing: 0.05em;">💡
+                        Mandatory Ingestion Guide</span>
+                    To trigger full biometric verification and cross-modal demographic checks, please upload or capture
+                    files covering these three areas:
+                    <ul
+                        style="margin-left: 1.15rem; margin-top: 0.35rem; display: flex; flex-direction: column; gap: 0.35rem; list-style-type: disc;">
+                        <li>📄 <strong>Government ID / Document Scan</strong> (Aadhaar, Passport, PAN, DL, Utility Bill)
+                            for OCR and layout forensics.</li>
+                        <li>🧑 <strong>Selfie / Face Portrait</strong> for visual deepfake liveness and
+                            document-to-selfie facial embedding comparison.</li>
+                        <li>🎙️ <strong>Audio Speech / Video</strong> (WAV, MP3, MP4) for speaker verification and
+                            synthetic voice screening.<br><span
+                                style="color: var(--accent-orange); font-size: 0.65rem; font-weight: 600;">⚠️ Mobile
+                                Note: Real-time recording requires a secure origin (HTTPS ngrok tunnel or USB tethered
+                                localhost) on mobile browsers.</span></li>
+                    </ul>
+                </div>
+            </div>
+
+            <ul id="selectedFiles" class="file-list"></ul>
+
+            <button id="submitBtn" class="btn-submit" disabled>
+                <span>🚀 Execute Forensic Pipeline</span>
+            </button>
+        </div>
+
+        <!-- Right results area -->
+        <div class="workspace-area">
+            <!-- Active Log Console -->
+            <div class="glass-card" style="padding: 1rem 1.5rem; gap: 0.75rem;">
+                <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                    <h2 style="font-size:0.85rem;">💻 Live Orchestration Stream</h2>
+                    <span
+                        style="font-size:0.6rem; text-transform:uppercase; color:var(--accent-cyan); font-weight:700; letter-spacing:0.05em;">Agent
+                        Logs</span>
+                </div>
+                <div id="console" class="console-panel">
+                    <div class="console-line">Ready. Drop forensic assets on the left panel to begin.</div>
+                </div>
+            </div>
+
+            <!-- Forensic Results Metrics -->
+            <div class="telemetry-grid">
+                <!-- Composite Risk Card -->
+                <div class="glass-card composite-risk-card">
+                    <div class="card-header">
+                        <h2>🛡️ Consolidated Assessment</h2>
+                    </div>
+
+                    <div class="risk-gauge-container">
+                        <svg class="risk-gauge-svg">
+                            <defs>
+                                <linearGradient id="cyan-purple-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#06b6d4" />
+                                    <stop offset="100%" stop-color="#8b5cf6" />
+                                </linearGradient>
+                            </defs>
+                            <circle class="gauge-background" cx="70" cy="70" r="65" />
+                            <circle id="gaugeFill" class="gauge-fill" cx="70" cy="70" r="65" />
+                        </svg>
+                        <div class="gauge-text">
+                            <span id="riskScore" class="risk-score-value">0</span>
+                            <span class="risk-score-label">Score</span>
+                        </div>
+                    </div>
+
+                    <div id="riskLevelBadge" class="risk-badge low">No Target</div>
+                    <p id="recommendationText"
+                        style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.5rem; line-height: 1.4;">
+                        System decision recommendation will populate upon execution.
+                    </p>
+                </div>
+
+                <!-- Forensic Tabbed Details Card -->
+                <div class="glass-card evidence-tabs-card">
+                    <div class="tabs-header">
+                        <button class="tab-btn active" onclick="switchTab('signalsTab')">Threat Signals</button>
+                        <button class="tab-btn" onclick="switchTab('flowTab')">Forensic Flow</button>
+                        <button class="tab-btn" onclick="switchTab('ocrTab')">Document OCR</button>
+                        <button class="tab-btn" onclick="switchTab('auditTab')">Audit History</button>
+                        <button class="tab-btn" onclick="switchTab('assetsTab')">Debug Images</button>
+                        <button class="tab-btn" onclick="switchTab('jsonTab')">Raw Case JSON</button>
+                    </div>
+
+                    <!-- Threats Tab -->
+                    <div id="signalsTab" class="tab-content active">
+                        <div class="empty-placeholder" id="signalsPlaceholder">
+                            <div class="empty-placeholder-icon">⚠️</div>
+                            <p>No threat signals generated yet</p>
+                        </div>
+                        <div class="signals-list" id="signalsContainer" style="display:none;"></div>
+                    </div>
+
+                    <!-- Forensic Pipeline Flow Tab -->
+                    <div id="flowTab" class="tab-content">
+                        <div class="empty-placeholder" id="flowPlaceholder">
+                            <div class="empty-placeholder-icon">⛓️</div>
+                            <p>No pipeline processing data loaded yet</p>
+                        </div>
+                        <div id="flowContainer"
+                            style="display:none; display: flex; flex-direction: column; gap: 1.25rem;"></div>
+                    </div>
+
+                    <!-- OCR Tab -->
+                    <div id="ocrTab" class="tab-content">
+                        <div class="empty-placeholder" id="ocrPlaceholder">
+                            <div class="empty-placeholder-icon">📝</div>
+                            <p>No document OCR fields extracted yet</p>
+                        </div>
+                        <div id="ocrContainer"
+                            style="display:none; display: flex; flex-direction: column; gap: 1.25rem;">
+                            <!-- Standard Fields Grid -->
+                            <div class="ocr-grid" id="ocrFieldsGrid"></div>
+
+                            <!-- Full Extracted Text -->
+                            <div class="ocr-section">
+                                <div class="ocr-section-title">📝 Extracted Raw Text</div>
+                                <pre id="ocrRawText" class="ocr-text-pane"></pre>
+                            </div>
+
+                            <!-- Dynamic JSON Block -->
+                            <div class="ocr-section" style="position: relative;">
+                                <div class="ocr-section-title">⚙️ Converted Dynamic JSON</div>
+                                <button id="copyOcrJsonBtn" class="btn-submit"
+                                    style="position: absolute; top: -0.25rem; right: 0; padding: 0.25rem 0.5rem; font-size: 0.65rem; border-radius: 4px; z-index: 10;"
+                                    onclick="copyOcrJson()">
+                                    <span>📋 Copy JSON</span>
+                                </button>
+                                <pre id="ocrDynamicJson" class="ocr-json-pane"></pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Audit Tab -->
+                    <div id="auditTab" class="tab-content">
+                        <div class="empty-placeholder" id="auditPlaceholder">
+                            <div class="empty-placeholder-icon">⏳</div>
+                            <p>No audit compliance history recorded yet</p>
+                        </div>
+                        <div class="audit-timeline" id="auditContainer" style="display:none;"></div>
+                    </div>
+
+                    <!-- Debug Images Tab -->
+                    <div id="assetsTab" class="tab-content">
+                        <div class="empty-placeholder" id="assetsPlaceholder">
+                            <div class="empty-placeholder-icon">🖼️</div>
+                            <p>No analysis assets or debug images generated yet</p>
+                        </div>
+                        <div class="assets-grid" id="assetsContainer" style="display:none;"></div>
+                    </div>
+
+                    <!-- Raw JSON Tab -->
+                    <div id="jsonTab" class="tab-content" style="position: relative;">
+                        <div class="empty-placeholder" id="jsonPlaceholder">
+                            <div class="empty-placeholder-icon">⚙️</div>
+                            <p>No raw JSON payload loaded yet</p>
+                        </div>
+                        <button id="copyJsonBtn" class="btn-submit"
+                            style="display: none; position: absolute; top: 0.5rem; right: 0.5rem; padding: 0.25rem 0.5rem; font-size: 0.65rem; border-radius: 4px; z-index: 10;"
+                            onclick="copyRawJson()">
+                            <span>📋 Copy JSON</span>
+                        </button>
+                        <pre id="jsonContainer"
+                            style="display:none; background: #02040a; color: #a5f3fc; border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 1rem; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; overflow: auto; max-height: 280px; text-align: left; width: 100%; box-sizing: border-box;"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Capture Modal Overlay -->
+    <div id="captureModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="captureModalTitle" class="modal-title">🎙️ Record Media</h3>
+                <button type="button" class="modal-close" id="captureModalCloseBtn">×</button>
+            </div>
+
+
+            <div id="recordingHelpText"
+                style="background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.3); padding: 1rem; border-radius: 0.5rem; margin-top: 0.5rem; font-size: 0.8rem; color: var(--text-primary); line-height: 1.4;">
+                <strong style="color: var(--accent-cyan);">🗣️ Speaking Prompt:</strong><br>
+                Please clearly state: <i>"Hi, my name is [Your Full Name], my date of birth is [Your DOB], my gender is
+                    [Your Gender], and my country of issuance is [Your Country]."</i> This information will be
+                cross-referenced with your uploaded documents to detect identity inconsistencies.
+            </div>
+
+            <!-- Video Recording Interface -->
+            <div id="videoCaptureContainer" style="display: none; width: 100%;">
+                <div class="webcam-container">
+                    <div id="videoRecordIndicator" class="recording-pulse" style="display: none;">
+                        <div class="pulse-dot"></div>
+                        <span>REC</span>
+                    </div>
+                    <video id="webcamPreview" class="webcam-preview mirrored" autoplay playsinline muted></video>
+                </div>
+            </div>
+
+
+            <!-- Audio Recording Interface -->
+            <div id="audioCaptureContainer" style="display: none; width: 100%; flex-direction: column; gap: 1rem;">
+                <div class="audio-visualizer-container" id="visualizerContainer"></div>
+            </div>
+
+            <!-- Live Status/Timer -->
+            <div id="captureStatusText" style="text-align: center; font-size: 0.8rem; color: var(--text-secondary);">
+                Click Start to begin recording
+            </div>
+            <div id="captureTimer" class="timer-display" style="display: none;">00:00</div>
+
+            <!-- Modal Action Controls -->
+            <div class="controls-row">
+                <button type="button" id="startCaptureBtn" class="btn-submit">
+                    <span>🔴 Start</span>
+                </button>
+                <button type="button" id="stopCaptureBtn" class="btn-submit"
+                    style="display: none; background: var(--accent-red); box-shadow: 0 4px 15px rgba(239, 68, 68, 0.2);">
+                    <span>⏹️ Stop</span>
+                </button>
+                <button type="button" id="saveCaptureBtn" class="btn-submit"
+                    style="display: none; background: linear-gradient(135deg, var(--accent-green), #059669); box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2);">
+                    <span>💾 Save to Queue</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    <script>
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+        const selectedFilesList = document.getElementById('selectedFiles');
+        const submitBtn = document.getElementById('submitBtn');
+        const consolePanel = document.getElementById('console');
+        const connectionStatus = document.getElementById('connectionStatus');
+
+        let uploadQueue = [];
+
+        // Check NIM connectivity on load
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch('/health');
+                const data = await response.json();
+                // Determine if VLM models are fully loaded
+                if (data.engines && data.engines.document_ocr_agent === "ONLINE") {
+                    writeLog("System connection verified. All agent engines ONLINE.", "success");
+                }
+            } catch (err) {
+                writeLog("Could not reach background API gateway service.", "error");
+            }
+        });
+
+        // Trigger file selection
+        dropzone.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', (e) => {
+            handleSelectedFiles(e.target.files);
+        });
+
+        // Drag events
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('dragover');
+        });
+
+        dropzone.addEventListener('dragleave', () => {
+            dropzone.classList.remove('dragover');
+        });
+
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('dragover');
+            handleSelectedFiles(e.dataTransfer.files);
+        });
+
+        function handleSelectedFiles(files) {
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                // Check if already in queue
+                if (!uploadQueue.some(f => f.name === file.name && f.size === file.size)) {
+                    uploadQueue.push(file);
+                }
+            }
+            renderFileList();
+        }
+
+        function removeFile(index) {
+            uploadQueue.splice(index, 1);
+            renderFileList();
+        }
+
+        function renderFileList() {
+            selectedFilesList.innerHTML = '';
+            uploadQueue.forEach((file, index) => {
+                const item = document.createElement('li');
+                item.className = 'file-item';
+
+                const details = document.createElement('div');
+                details.className = 'file-item-name';
+                details.innerHTML = `📄 <span>${file.name}</span> <span style="font-size:0.6rem; color:var(--text-secondary);">(${(file.size / (1024 * 1024)).toFixed(2)} MB)</span>`;
+
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'file-remove-btn';
+                removeBtn.innerText = '✕';
+                removeBtn.onclick = () => removeFile(index);
+
+                item.appendChild(details);
+                item.appendChild(removeBtn);
+                selectedFilesList.appendChild(item);
+            });
+
+            submitBtn.disabled = uploadQueue.length === 0;
+        }
+
+        function writeLog(text, type = "") {
+            const line = document.createElement('div');
+            line.className = `console-line ${type}`;
+            const time = new Date().toLocaleTimeString();
+            line.innerText = `[${time}] ${text}`;
+            consolePanel.appendChild(line);
+            consolePanel.scrollTop = consolePanel.scrollHeight;
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            const clickedBtn = Array.from(document.querySelectorAll('.tab-btn')).find(btn => btn.getAttribute('onclick').includes(tabId));
+            if (clickedBtn) clickedBtn.classList.add('active');
+
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        // Action submit execution
+        submitBtn.addEventListener('click', async () => {
+            const apiKey = document.getElementById('apiKeyInput').value.trim();
+            if (!apiKey) {
+                alert("Please specify a Sentinel API key to authorize the request.");
+                return;
+            }
+
+            submitBtn.disabled = true;
+            writeLog("Initiating multi-modal ingestion cycle...", "success");
+
+            const formData = new FormData();
+            uploadQueue.forEach(file => {
+                formData.append("files", file);
+            });
+
+            try {
+                // 1. Submit Ingestion
+                const response = await fetch('/api/v1/ingest/upload', {
+                    method: 'POST',
+                    headers: {
+                        'x-api-key': apiKey
+                    },
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.detail || "Ingestion rejected by Gateway.");
+                }
+
+                const ingestData = await response.json();
+                const caseId = ingestData.case_id;
+                writeLog(`Case index created: ${caseId}. Pipeline running in background...`, "success");
+
+                // Start polling results
+                pollCaseStatus(caseId, apiKey);
+
+            } catch (err) {
+                writeLog(`Ingestion error: ${err.message}`, "error");
+                submitBtn.disabled = false;
+            }
+        });
+
+        // Polling worker
+        async function pollCaseStatus(caseId, apiKey) {
+            let attempts = 0;
+            const maxAttempts = 120; // 3 minutes (120 * 1500ms)
+
+            const timer = setInterval(async () => {
+                attempts++;
+                writeLog(`Polling case forensics status (Attempt ${attempts})...`);
+
+                try {
+                    const response = await fetch(`/api/v1/jobs/status/${caseId}`, {
+                        headers: { 'x-api-key': apiKey }
+                    });
+
+                    if (!response.ok) throw new Error("Retrieval failed.");
+
+                    const caseData = await response.json();
+
+                    if (caseData.status === "COMPLETED") {
+                        clearInterval(timer);
+                        writeLog("Forensics analysis finalized with outstanding success!", "success");
+                        renderEvidence(caseData);
+                        submitBtn.disabled = false;
+                    } else if (caseData.status === "FAILED") {
+                        clearInterval(timer);
+                        writeLog("Central Orchestration pipeline encountered a failure.", "error");
+                        submitBtn.disabled = false;
+                    }
+
+                } catch (err) {
+                    writeLog(`Polling error: ${err.message}`, "warning");
+                }
+
+                if (attempts >= maxAttempts) {
+                    clearInterval(timer);
+                    writeLog("Polling timeout reached. Please check FastAPI console logs.", "error");
+                    submitBtn.disabled = false;
+                }
+            }, 1500);
+        }
+
+        let lastCaseData = null;
+
+        function copyRawJson() {
+            if (!lastCaseData) return;
+            navigator.clipboard.writeText(JSON.stringify(lastCaseData, null, 2))
+                .then(() => {
+                    const btn = document.getElementById('copyJsonBtn');
+                    const span = btn.querySelector('span');
+                    span.innerText = "✓ Copied!";
+                    setTimeout(() => {
+                        span.innerText = "📋 Copy JSON";
+                    }, 2000);
+                })
+                .catch(err => {
+                    writeLog("Failed to copy JSON to clipboard.", "error");
+                });
+        }
+
+        function copyOcrJson() {
+            const ocr = (lastCaseData && lastCaseData.evidence && lastCaseData.evidence.metadata_forensics && lastCaseData.evidence.metadata_forensics.ocr_payload) || {};
+            const dynamicJson = ocr.dynamic_json || {};
+            navigator.clipboard.writeText(JSON.stringify(dynamicJson, null, 2))
+                .then(() => {
+                    const btn = document.getElementById('copyOcrJsonBtn');
+                    const span = btn.querySelector('span');
+                    span.innerText = "✓ Copied!";
+                    setTimeout(() => {
+                        span.innerText = "📋 Copy JSON";
+                    }, 2000);
+                })
+                .catch(err => {
+                    writeLog("Failed to copy OCR JSON to clipboard.", "error");
+                });
+        }
+
+        function getStorageUrl(absolutePath) {
+            if (!absolutePath) return '';
+            const normalized = absolutePath.replace(/\\/g, '/');
+
+            // Look for /storage/uploads/
+            const storageIndex = normalized.lastIndexOf('/storage/uploads/');
+            if (storageIndex !== -1) {
+                return '/storage/' + normalized.substring(storageIndex + '/storage/uploads/'.length);
+            }
+
+            // Look for /uploads/
+            const uploadsIndex = normalized.lastIndexOf('/uploads/');
+            if (uploadsIndex !== -1) {
+                return '/storage/' + normalized.substring(uploadsIndex + '/uploads/'.length);
+            }
+
+            // Look for /storage/
+            const storagePrefixIndex = normalized.lastIndexOf('/storage/');
+            if (storagePrefixIndex !== -1) {
+                return '/storage/' + normalized.substring(storagePrefixIndex + '/storage/'.length);
+            }
+
+            return absolutePath;
+        }
+
+        // Render Evidence Pack
+        function renderEvidence(data) {
+            if (!data) return;
+
+            // Handle both full JobResponse or just EvidencePackage
+            const evidence = data.evidence || data;
+            const re = evidence.risk_evaluation;
+            if (re) {
+                document.getElementById('riskScore').innerText = re.composite_risk_score;
+
+                // Animate gauge fill (circumference = 408)
+                const fillOffset = 408 - (408 * (re.composite_risk_score / 100));
+                document.getElementById('gaugeFill').style.strokeDashoffset = fillOffset;
+
+                // Badges
+                const badge = document.getElementById('riskLevelBadge');
+                badge.innerText = re.risk_level;
+                badge.className = `risk-badge ${re.risk_level.toLowerCase()}`;
+
+                // Recommendation
+                document.getElementById('recommendationText').innerText = `Decision: ${re.recommendation}. Composite risk score is computed at ${re.composite_risk_score}/100 based on weighted signal severe parameters.`;
+            }
+
+            // 2. Render Threat Signals
+            const signals = evidence.detected_threats || [];
+            const container = document.getElementById('signalsContainer');
+            const placeholder = document.getElementById('signalsPlaceholder');
+
+            if (signals.length > 0) {
+                placeholder.style.display = 'none';
+                container.style.display = 'flex';
+                container.innerHTML = '';
+
+                signals.forEach(sig => {
+                    const card = document.createElement('div');
+                    card.className = 'signal-card';
+                    card.innerHTML = `
+                        <div class="signal-card-header">
+                            <span class="signal-category">${sig.category}</span>
+                            <span class="signal-severity ${sig.severity.toLowerCase()}">${sig.severity}</span>
+                        </div>
+                        <div class="signal-desc">${sig.description}</div>
+                        <div class="signal-meta">
+                            <span>Source: ${sig.engine_name}</span>
+                            <span class="signal-payload-toggle" style="color:var(--accent-cyan); cursor:pointer; font-weight:600;">View Payload</span>
+                        </div>
+                    `;
+                    card.querySelector('.signal-payload-toggle').addEventListener('click', () => {
+                        alert(JSON.stringify(sig.evidence_payload, null, 2));
+                    });
+                    container.appendChild(card);
+                    writeLog(`Isolated Threat: ${sig.category} (${sig.severity}) by ${sig.engine_name}`, "warning");
+                });
+            } else {
+                placeholder.style.display = 'flex';
+                container.style.display = 'none';
+            }
+
+            // 3. Render OCR Fields dynamically from backend ocr_payload (NO MOCK DATA)
+            const ocrContainer = document.getElementById('ocrContainer');
+            const ocrPlaceholder = document.getElementById('ocrPlaceholder');
+
+            const ocr = (evidence.metadata_forensics && evidence.metadata_forensics.ocr_payload) || {};
+
+            const fields = [];
+            if (ocr.full_name) fields.push({ label: "Full Name", value: ocr.full_name });
+            if (ocr.date_of_birth) fields.push({ label: "Date of Birth", value: ocr.date_of_birth });
+            if (ocr.gender) fields.push({ label: "Gender", value: ocr.gender });
+            if (ocr.document_number) fields.push({ label: "Document Number", value: ocr.document_number });
+            if (ocr.issuing_country) fields.push({ label: "Issuing Country", value: ocr.issuing_country });
+            if (ocr.document_type) fields.push({ label: "Document Type", value: ocr.document_type });
+
+            const fullRawText = ocr.full_raw_text || "";
+            const dynamicJson = ocr.dynamic_json || {};
+
+            const hasOcr = (fields.length > 0) || (fullRawText.trim() !== "") || (Object.keys(dynamicJson).length > 0);
+
+            if (hasOcr) {
+                ocrPlaceholder.style.display = 'none';
+                ocrContainer.style.display = 'flex';
+
+                // Render demographic fields grid
+                const ocrFieldsGrid = document.getElementById('ocrFieldsGrid');
+                if (fields.length > 0) {
+                    ocrFieldsGrid.style.display = 'grid';
+                    ocrFieldsGrid.innerHTML = '';
+                    fields.forEach(f => {
+                        const item = document.createElement('div');
+                        item.className = 'ocr-field';
+                        item.innerHTML = `
+                            <div class="ocr-field-label">${f.label}</div>
+                            <div class="ocr-field-value">${f.value}</div>
+                        `;
+                        ocrFieldsGrid.appendChild(item);
+                    });
+                } else {
+                    ocrFieldsGrid.style.display = 'none';
+                }
+
+                // Render Extracted Raw Text
+                const ocrRawText = document.getElementById('ocrRawText');
+                if (fullRawText.trim() !== "") {
+                    ocrRawText.parentElement.style.display = 'flex';
+                    ocrRawText.innerText = fullRawText;
+                } else {
+                    ocrRawText.parentElement.style.display = 'none';
+                }
+
+                // Render Dynamic JSON
+                const ocrDynamicJson = document.getElementById('ocrDynamicJson');
+                if (Object.keys(dynamicJson).length > 0) {
+                    ocrDynamicJson.parentElement.style.display = 'block';
+                    ocrDynamicJson.innerText = JSON.stringify(dynamicJson, null, 2);
+                } else {
+                    ocrDynamicJson.parentElement.style.display = 'none';
+                }
+            } else {
+                ocrPlaceholder.style.display = 'flex';
+                ocrContainer.style.display = 'none';
+            }
+
+            // 4. Render Audit Timeline
+            const audits = evidence.audit_history || [];
+            const auditContainer = document.getElementById('auditContainer');
+            const auditPlaceholder = document.getElementById('auditPlaceholder');
+
+            if (audits.length > 0) {
+                auditPlaceholder.style.display = 'none';
+                auditContainer.style.display = 'flex';
+                auditContainer.innerHTML = '';
+
+                audits.forEach(log => {
+                    const item = document.createElement('div');
+                    item.className = 'audit-item';
+                    item.innerHTML = `
+                        <div class="audit-node"></div>
+                        <div class="audit-content">
+                            <div class="audit-header">
+                                <span>${log.action}</span>
+                                <span style="font-size:0.6rem; color:var(--text-secondary);">${new Date(log.timestamp).toLocaleTimeString()}</span>
+                            </div>
+                            <div class="audit-desc">[Agent: ${log.actor}] - ${log.details}</div>
+                        </div>
+                    `;
+                    auditContainer.appendChild(item);
+                });
+            } else {
+                auditPlaceholder.style.display = 'flex';
+                auditContainer.style.display = 'none';
+            }
+
+            // 5. Render Raw JSON tab
+            lastCaseData = data; // Store globally for copy action
+            const jsonPlaceholder = document.getElementById('jsonPlaceholder');
+            const jsonContainer = document.getElementById('jsonContainer');
+            const copyJsonBtn = document.getElementById('copyJsonBtn');
+
+            if (data) {
+                jsonPlaceholder.style.display = 'none';
+                jsonContainer.style.display = 'block';
+                copyJsonBtn.style.display = 'block';
+                jsonContainer.textContent = JSON.stringify(data, null, 2);
+            } else {
+                jsonPlaceholder.style.display = 'flex';
+                jsonContainer.style.display = 'none';
+                copyJsonBtn.style.display = 'none';
+            }
+
+            // 6. Render Debug Images tab
+            const assetsPlaceholder = document.getElementById('assetsPlaceholder');
+            const assetsContainer = document.getElementById('assetsContainer');
+            const filesReceived = data.files_received || [];
+            const sanitizedFiles = data.sanitized_files || evidence.sanitized_files || [];
+
+            const allFiles = [];
+
+            filesReceived.forEach(path => {
+                const name = path.split(/[/\\]/).pop();
+                allFiles.push({
+                    name: name,
+                    path: path,
+                    type: 'Raw Ingestion File'
+                });
+            });
+
+            sanitizedFiles.forEach(path => {
+                const name = path.split(/[/\\]/).pop();
+                let type = 'Sanitized Media';
+                if (name.includes('spectrogram')) {
+                    type = 'Audio Spectrogram Analysis';
+                }
+                allFiles.push({
+                    name: name,
+                    path: path,
+                    type: type
+                });
+            });
+
+            if (allFiles.length > 0) {
+                assetsPlaceholder.style.display = 'none';
+                assetsContainer.style.display = 'grid';
+                assetsContainer.innerHTML = '';
+
+                allFiles.forEach(file => {
+                    const card = document.createElement('div');
+                    card.className = 'asset-card';
+
+                    const url = getStorageUrl(file.path);
+                    const nameLower = file.name.toLowerCase();
+
+                    let mediaElementHtml = '';
+                    if (nameLower.endsWith('.wav') || nameLower.endsWith('.mp3')) {
+                        mediaElementHtml = `<audio class="asset-media" src="${url}" controls style="height: 54px; padding: 5px;"></audio>`;
+                    } else if (nameLower.endsWith('.mp4')) {
+                        mediaElementHtml = `<video class="asset-media" src="${url}" controls style="max-height: 100px;"></video>`;
+                    } else if (nameLower.endsWith('.png') || nameLower.endsWith('.jpg') || nameLower.endsWith('.jpeg') || nameLower.endsWith('.webp') || nameLower.endsWith('.gif')) {
+                        mediaElementHtml = `<img class="asset-media" src="${url}" alt="${file.name}">`;
+                    } else {
+                        mediaElementHtml = `<div class="asset-media" style="display:flex; align-items:center; justify-content:center; font-size:2rem; color:var(--text-secondary);">📄</div>`;
+                    }
+
+                    card.innerHTML = `
+                        <div class="asset-title" title="${file.name}">${file.name}</div>
+                        ${mediaElementHtml}
+                        <span class="asset-badge">${file.type}</span>
+                    `;
+
+                    assetsContainer.appendChild(card);
+                });
+            } else {
+                assetsPlaceholder.style.display = 'flex';
+                assetsContainer.style.display = 'none';
+            }
+
+            // 7. Render Forensic Flow Tab
+            const flowContainer = document.getElementById('flowContainer');
+            const flowPlaceholder = document.getElementById('flowPlaceholder');
+
+            if (data && allFiles.length > 0) {
+                flowPlaceholder.style.display = 'none';
+                flowContainer.style.display = 'flex';
+                flowContainer.innerHTML = '';
+
+                const threats = evidence.detected_threats || [];
+                const ocrData = (evidence.metadata_forensics && evidence.metadata_forensics.ocr_payload) || {};
+
+                allFiles.forEach(file => {
+                    const nameLower = file.name.toLowerCase();
+
+                    const card = document.createElement('div');
+                    card.className = 'glass-card';
+                    card.style.background = 'rgba(255, 255, 255, 0.01)';
+                    card.style.border = '1px solid rgba(255, 255, 255, 0.06)';
+                    card.style.padding = '1.25rem';
+                    card.style.display = 'flex';
+                    card.style.flexDirection = 'column';
+                    card.style.gap = '0.75rem';
+                    card.style.width = '100%';
+                    card.style.boxShadow = 'none';
+
+                    // Determine file type icon
+                    let icon = '📄';
+                    if (nameLower.endsWith('.wav') || nameLower.endsWith('.mp3')) icon = '🎙️';
+                    else if (nameLower.endsWith('.mp4') || nameLower.endsWith('.webm')) icon = '🎥';
+                    else if (nameLower.endsWith('.png') || nameLower.endsWith('.jpg') || nameLower.endsWith('.jpeg')) icon = '🖼️';
+
+                    // Determine processing details
+                    let engines = [];
+                    let extractedInfo = [];
+                    let processSteps = [];
+
+                    // Find threats related to this file
+                    const fileThreats = threats.filter(t => {
+                        const desc = t.description.toLowerCase();
+                        const payload = JSON.stringify(t.evidence_payload || {}).toLowerCase();
+                        return desc.includes(nameLower) || payload.includes(nameLower) || (nameLower.includes('ruturaj') && desc.includes('ruturaj'));
+                    });
+
+                    if (nameLower.endsWith('.wav') || nameLower.endsWith('.mp3') || nameLower.endsWith('.mp4') || nameLower.endsWith('.webm')) {
+                        // Audio/Video Processing
+                        engines = ['FFmpeg Audio Demuxer', 'AASIST-v2-Spectral Liveness Model', 'Fourier Transform Spectrogram Generator', 'NVIDIA NIM meta/llama-3.2-11b-vision-instruct'];
+
+                        processSteps = [
+                            'Demux audio track to 16kHz PCM WAV format via FFmpeg.',
+                            'Calculate short-time Fourier Transform (STFT) matrix using Hamming windows to compile visual frequency spectrogram.',
+                            'Evaluate audio phase structures and checkerboard patterns locally using the neural AASIST model.',
+                            'Submit frequency spectrogram to NVIDIA NIM VLM interface for deep learning anomaly classification.'
+                        ];
+
+                        if (ocrData.voice_transcript) {
+                            extractedInfo.push(`<strong>Speech Transcript:</strong> "${ocrData.voice_transcript}"`);
+                        }
+                        if (ocrData.voice_demographics) {
+                            const vd = ocrData.voice_demographics;
+                            let vDetails = [];
+                            if (vd.full_name) vDetails.push(`Name: ${vd.full_name}`);
+                            if (vd.date_of_birth) vDetails.push(`DOB: ${vd.date_of_birth}`);
+                            if (vd.gender) vDetails.push(`Gender: ${vd.gender}`);
+                            if (vd.issuing_country) vDetails.push(`Country: ${vd.issuing_country}`);
+                            if (vDetails.length > 0) {
+                                extractedInfo.push(`<strong>Stated Demographics (Voice):</strong> ${vDetails.join(', ')}`);
+                            }
+                        }
+                        if (ocrData.voice_embeddings_hashes && ocrData.voice_embeddings_hashes.length > 0) {
+                            extractedInfo.push(`<strong>Speaker fingerprint hash:</strong> <code>${ocrData.voice_embeddings_hashes[0]}</code>`);
+                        }
+                    } else if (nameLower.includes('adhar') || nameLower.includes('licence') || nameLower.includes('license') || nameLower.includes('passport') || nameLower.includes('pan') || nameLower.includes('scan') || nameLower.includes('doc')) {
+                        // Document processing
+                        engines = ['PaddleOCR Engine', 'RetinaFace Portrait Cropper', 'NVIDIA NIM meta/llama-3.2-11b-vision-instruct'];
+                        processSteps = [
+                            'Perform local raw text extraction using PaddleOCR boundary classifications.',
+                            'Run localized RetinaFace face coordinate search to locate and crop document photo.',
+                            'Transmit full raw text and document visual layout to NVIDIA NIM VLM layout forensics model.'
+                        ];
+
+                        let docDetails = [];
+                        if (ocrData.full_name) docDetails.push(`Name: ${ocrData.full_name}`);
+                        if (ocrData.date_of_birth) docDetails.push(`DOB: ${ocrData.date_of_birth}`);
+                        if (ocrData.gender) docDetails.push(`Gender: ${ocrData.gender}`);
+                        if (ocrData.document_number) docDetails.push(`Doc Number: ${ocrData.document_number}`);
+                        if (ocrData.document_type) docDetails.push(`Doc Type: ${ocrData.document_type}`);
+                        if (ocrData.issuing_country) docDetails.push(`Country: ${ocrData.issuing_country}`);
+
+                        if (docDetails.length > 0) {
+                            extractedInfo.push(`<strong>Extracted Demographics (OCR):</strong> ${docDetails.join(', ')}`);
+                        }
+                    } else if (nameLower.includes('spectrogram')) {
+                        engines = ['Fourier Transform Spectrogram Generator', 'NVIDIA NIM meta/llama-3.2-11b-vision-instruct'];
+                        processSteps = [
+                            'Visual representation of speech frequencies used by VLM for synthetic voice screening.'
+                        ];
+                    } else {
+                        // Face portrait/selfie processing
+                        engines = ['InsightFace (RetinaFace/buffalo_l)', 'SilentFace Passive Liveness Model', 'NVIDIA NIM meta/llama-3.2-11b-vision-instruct'];
+                        processSteps = [
+                            'Align face and locate bounding boxes using local ArcFace model.',
+                            'Evaluate passive liveness (printed photo or screen replay texture markers) locally.',
+                            'Perform deep learning estimated age/gender analysis and GAN artifact checking via NVIDIA NIM VLM.'
+                        ];
+
+                        if (ocrData.biometric_estimated_age) {
+                            extractedInfo.push(`<strong>Estimated Age:</strong> ${ocrData.biometric_estimated_age} years old`);
+                        }
+                        if (ocrData.biometric_estimated_gender) {
+                            extractedInfo.push(`<strong>Estimated Gender:</strong> ${ocrData.biometric_estimated_gender}`);
+                        }
+                        if (ocrData.face_embeddings_hashes && ocrData.face_embeddings_hashes.length > 0) {
+                            let faceIdx = 0;
+                            if (nameLower.includes('ruturaj')) faceIdx = 0;
+                            const fh = ocrData.face_embeddings_hashes[faceIdx] || ocrData.face_embeddings_hashes[0];
+                            extractedInfo.push(`<strong>Face Biometric Hash:</strong> <code>${fh}</code>`);
+                        }
+                    }
+
+                    // Construct Threat Badge
+                    let threatStatusHtml = `<span style="font-size:0.65rem; font-weight:700; color:var(--accent-green); background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.2); padding:0.15rem 0.5rem; border-radius:4px; text-transform:uppercase;">No Anomaly Detected</span>`;
+                    if (fileThreats.length > 0) {
+                        threatStatusHtml = fileThreats.map(t => `<span style="font-size:0.65rem; font-weight:700; color:var(--accent-red); background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.2); padding:0.15rem 0.5rem; border-radius:4px; text-transform:uppercase; display:inline-block; margin-bottom:0.2rem;">⚠️ ${t.category} (${t.severity})</span>`).join(' ');
+                    }
+
+                    card.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:0.5rem;">
+                            <div style="font-size:0.8rem; font-weight:700; color:#fff; display:flex; align-items:center; gap:0.5rem;">
+                                <span>${icon}</span>
+                                <span>${file.name}</span>
+                            </div>
+                            <span style="font-size:0.6rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em;">${file.type}</span>
+                        </div>
+                        
+                        <div style="display:flex; flex-direction:column; gap:0.5rem; font-size:0.75rem;">
+                            <div>
+                                <span style="font-weight:600; color:var(--accent-cyan); display:block; margin-bottom:0.15rem; font-size:0.65rem; text-transform:uppercase; letter-spacing:0.05em; text-align: left;">⚙️ Processing Engines</span>
+                                <div style="display:flex; flex-wrap:wrap; gap:0.35rem;">
+                                    ${engines.map(eng => `<span style="font-size:0.65rem; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); padding:0.1rem 0.4rem; border-radius:4px; color:var(--text-secondary);">${eng}</span>`).join('')}
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <span style="font-weight:600; color:var(--accent-cyan); display:block; margin-bottom:0.15rem; font-size:0.65rem; text-transform:uppercase; letter-spacing:0.05em; text-align: left;">⛓️ How Processed</span>
+                                <ul style="margin-left:1.15rem; list-style-type:disc; color:var(--text-secondary); line-height:1.4; display:flex; flex-direction:column; gap:0.15rem; text-align: left;">
+                                    ${processSteps.map(step => `<li>${step}</li>`).join('')}
+                                </ul>
+                            </div>
+                            
+                            ${extractedInfo.length > 0 ? `
+                            <div>
+                                <span style="font-weight:600; color:var(--accent-cyan); display:block; margin-bottom:0.15rem; font-size:0.65rem; text-transform:uppercase; letter-spacing:0.05em; text-align: left;">🔍 Extracted Demographics & Biometrics</span>
+                                <div style="display:flex; flex-direction:column; gap:0.25rem; color:#fff; background:rgba(0,0,0,0.2); padding:0.5rem; border-radius:0.35rem; border:1px solid rgba(255,255,255,0.02); text-align: left;">
+                                    ${extractedInfo.map(info => `<div style="line-height:1.4;">${info}</div>`).join('')}
+                                </div>
+                            </div>
+                            ` : ''}
+                            
+                            <div style="margin-top:0.25rem; display:flex; align-items:center; justify-content:space-between; border-top:1px solid rgba(255,255,255,0.03); padding-top:0.5rem;">
+                                <span style="font-size:0.65rem; color:var(--text-secondary); font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Forensic Status:</span>
+                                <div>${threatStatusHtml}</div>
+                            </div>
+                        </div>
+                    `;
+                    flowContainer.appendChild(card);
+                });
+            } else {
+                flowPlaceholder.style.display = 'flex';
+                flowContainer.style.display = 'none';
+            }
+        }
+
+        // Media Capture State Variables
+        let mediaStream = null;
+        let mediaRecorder = null;
+        let audioContext = null;
+        let scriptProcessor = null;
+        let audioSource = null;
+        let analyser = null;
+        let audioSamples = [];
+        let recordingStartTime = 0;
+        let timerInterval = null;
+        let recordedChunks = [];
+        let captureMode = ""; // "audio" or "video"
+        let isRecording = false;
+        let recordedBlob = null;
+        let animationFrameId = null;
+
+        // Modal Controls
+        const captureModal = document.getElementById('captureModal');
+        const recordAudioBtn = document.getElementById('recordAudioBtn');
+        const recordVideoBtn = document.getElementById('recordVideoBtn');
+        const captureModalCloseBtn = document.getElementById('captureModalCloseBtn');
+
+        const videoCaptureContainer = document.getElementById('videoCaptureContainer');
+        const audioCaptureContainer = document.getElementById('audioCaptureContainer');
+        const captureModalTitle = document.getElementById('captureModalTitle');
+        const captureStatusText = document.getElementById('captureStatusText');
+        const captureTimer = document.getElementById('captureTimer');
+
+        const startCaptureBtn = document.getElementById('startCaptureBtn');
+        const stopCaptureBtn = document.getElementById('stopCaptureBtn');
+        const saveCaptureBtn = document.getElementById('saveCaptureBtn');
+        const webcamPreview = document.getElementById('webcamPreview');
+        const videoRecordIndicator = document.getElementById('videoRecordIndicator');
+
+        recordAudioBtn.addEventListener('click', () => openCaptureModal('audio'));
+        recordVideoBtn.addEventListener('click', () => openCaptureModal('video'));
+        captureModalCloseBtn.addEventListener('click', closeModal);
+
+        captureModal.addEventListener('click', (e) => {
+            if (e.target === captureModal) closeModal();
+        });
+
+        async function openCaptureModal(mode) {
+            captureMode = mode;
+            captureModal.style.display = 'flex';
+
+            startCaptureBtn.style.display = 'inline-flex';
+            startCaptureBtn.querySelector('span').innerText = "🔴 Start";
+            stopCaptureBtn.style.display = 'none';
+            saveCaptureBtn.style.display = 'none';
+            captureTimer.style.display = 'none';
+            captureTimer.innerText = '00:00';
+
+            webcamPreview.srcObject = null;
+            webcamPreview.src = "";
+            webcamPreview.controls = false;
+
+            if (mode === 'audio') {
+                captureModalTitle.innerHTML = '🎙️ Voice Recorder Console';
+                videoCaptureContainer.style.display = 'none';
+                audioCaptureContainer.style.display = 'flex';
+                captureStatusText.innerText = 'Ready to record voice. Click Start.';
+                setupVisualizer();
+            } else {
+                captureModalTitle.innerHTML = '🎥 Webcam Recording Console';
+                videoCaptureContainer.style.display = 'block';
+                audioCaptureContainer.style.display = 'none';
+                captureStatusText.innerText = 'Initializing camera preview...';
+                await startMedia('video');
+                captureStatusText.innerText = 'Camera ready. Click Start.';
+            }
+        }
+
+        async function startMedia(mode) {
+            try {
+                const audioConstraints = {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,
+                    sampleRate: 16000,
+                    channelCount: 1
+                };
+                if (mode === 'audio') {
+                    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
+                } else if (mode === 'video') {
+                    mediaStream = await navigator.mediaDevices.getUserMedia({
+                        video: { width: 1280, height: 720, frameRate: 30 },
+                        audio: audioConstraints
+                    });
+                    webcamPreview.srcObject = mediaStream;
+                    webcamPreview.muted = true;
+                    webcamPreview.play();
+                    webcamPreview.classList.add('mirrored');
+                }
+            } catch (err) {
+                writeLog(`Failed to acquire media devices: ${err.message}`, "error");
+                alert(`Media access error: ${err.message}\nMake sure your microphone/camera is connected and permissions are granted.`);
+                closeModal();
+            }
+        }
+
+        function setupVisualizer() {
+            const container = document.getElementById('visualizerContainer');
+            container.innerHTML = '';
+            for (let i = 0; i < 30; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'audio-bar';
+                container.appendChild(bar);
+            }
+        }
+
+        function animateVisualizer() {
+            if (!analyser || !isRecording) return;
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+            analyser.getByteFrequencyData(dataArray);
+
+            const bars = document.querySelectorAll('.audio-bar');
+            const barCount = bars.length;
+
+            for (let i = 0; i < barCount; i++) {
+                const dataIdx = Math.floor((i / barCount) * dataArray.length);
+                const val = dataArray[dataIdx] || 0;
+                const heightPercent = Math.max(8, (val / 255) * 100);
+                bars[i].style.height = `${heightPercent}%`;
+            }
+
+            animationFrameId = requestAnimationFrame(animateVisualizer);
+        }
+
+        startCaptureBtn.addEventListener('click', async () => {
+            if (captureMode === 'audio' && !mediaStream) {
+                await startMedia('audio');
+            }
+            if (!mediaStream) return;
+
+            recordedBlob = null;
+            recordedChunks = [];
+
+            startCaptureBtn.style.display = 'none';
+            stopCaptureBtn.style.display = 'inline-flex';
+            saveCaptureBtn.style.display = 'none';
+
+            captureStatusText.innerText = 'Recording...';
+
+            if (captureMode === 'audio') {
+                startAudioRecording();
+            } else {
+                startVideoRecording();
+            }
+
+            startTimer();
+        });
+
+        function startAudioRecording() {
+            isRecording = true;
+
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 256;
+            audioSource = audioContext.createMediaStreamSource(mediaStream);
+            audioSource.connect(analyser);
+            animateVisualizer();
+
+            let options = { mimeType: 'audio/webm;codecs=opus' };
+            if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                options = { mimeType: 'audio/webm' };
+            }
+            mediaRecorder = new MediaRecorder(mediaStream, options);
+            mediaRecorder.ondataavailable = function (e) {
+                if (e.data && e.data.size > 0) {
+                    recordedChunks.push(e.data);
+                }
+            };
+            mediaRecorder.onstop = function () {
+                recordedBlob = new Blob(recordedChunks, { type: 'audio/webm' });
+            };
+            mediaRecorder.start(1000);
+        }
+
+        function startVideoRecording() {
+            videoRecordIndicator.style.display = 'flex';
+
+            let options = { mimeType: 'video/webm;codecs=vp9,opus' };
+            if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                options = { mimeType: 'video/webm;codecs=vp8,opus' };
+            }
+            if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                options = { mimeType: 'video/webm' };
+            }
+
+            mediaRecorder = new MediaRecorder(mediaStream, options);
+            mediaRecorder.ondataavailable = function (e) {
+                if (e.data && e.data.size > 0) {
+                    recordedChunks.push(e.data);
+                }
+            };
+
+            mediaRecorder.onstop = function () {
+                recordedBlob = new Blob(recordedChunks, { type: 'video/webm' });
+
+                webcamPreview.srcObject = null;
+                webcamPreview.src = URL.createObjectURL(recordedBlob);
+                webcamPreview.controls = true;
+                webcamPreview.muted = false;
+                webcamPreview.classList.remove('mirrored');
+                webcamPreview.play().catch(() => { });
+            };
+
+            mediaRecorder.start(1000);
+            isRecording = true;
+        }
+
+        stopCaptureBtn.addEventListener('click', () => {
+            stopTimer();
+            stopCaptureBtn.style.display = 'none';
+            startCaptureBtn.style.display = 'inline-flex';
+            startCaptureBtn.querySelector('span').innerText = "🔄 Re-record";
+            saveCaptureBtn.style.display = 'inline-flex';
+
+            captureStatusText.innerText = 'Recording completed. You can preview it or save it.';
+
+            if (captureMode === 'audio') {
+                stopAudioRecording();
+            } else {
+                videoRecordIndicator.style.display = 'none';
+                stopVideoRecording();
+            }
+
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+                mediaStream = null;
+            }
+        });
+
+        function stopAudioRecording() {
+            isRecording = false;
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+            if (audioSource) {
+                audioSource.disconnect();
+                audioSource = null;
+            }
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+        }
+
+        function stopVideoRecording() {
+            isRecording = false;
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+        }
+
+        function startTimer() {
+            captureTimer.style.display = 'block';
+            recordingStartTime = Date.now();
+            timerInterval = setInterval(() => {
+                const elapsed = Date.now() - recordingStartTime;
+                const totalSecs = Math.floor(elapsed / 1000);
+                const mins = String(Math.floor(totalSecs / 60)).padStart(2, '0');
+                const secs = String(totalSecs % 60).padStart(2, '0');
+                captureTimer.innerText = `${mins}:${secs}`;
+            }, 250);
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+
+        saveCaptureBtn.addEventListener('click', () => {
+            if (!recordedBlob) return;
+
+            const timestamp = Date.now();
+            let file;
+            if (captureMode === 'audio') {
+                file = new File([recordedBlob], `voice_record_${timestamp}.wav`, { type: 'audio/wav' });
+            } else {
+                file = new File([recordedBlob], `webcam_record_${timestamp}.mp4`, { type: 'video/mp4' });
+            }
+
+            uploadQueue.push(file);
+            renderFileList();
+            writeLog(`Real-time recording successfully added to queue: ${file.name}`, "success");
+            closeModal();
+        });
+
+        function closeModal() {
+            captureModal.style.display = 'none';
+            stopTimer();
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+                mediaStream = null;
+            }
+            if (scriptProcessor) {
+                scriptProcessor.disconnect();
+                scriptProcessor = null;
+            }
+            if (audioSource) {
+                audioSource.disconnect();
+                audioSource = null;
+            }
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
+            mediaRecorder = null;
+            isRecording = false;
+            recordedBlob = null;
+
+            webcamPreview.srcObject = null;
+            webcamPreview.src = "";
+            webcamPreview.controls = false;
+            videoRecordIndicator.style.display = 'none';
+            captureTimer.style.display = 'none';
+        }
+    </script>
+
+</body>
+
+</html>
