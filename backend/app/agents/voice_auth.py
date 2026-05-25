@@ -108,7 +108,7 @@ class VoiceAuthenticityAgent(BaseAgent):
                         severity="CRITICAL" if deepfake_score > 0.75 else "HIGH",
                         description=f"NVIDIA NIM Nemotron-3 Omni acoustic analysis flagged '{filename}' as synthetic: {summary}",
                         evidence_payload={
-                            "nvidia_model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
+                            "nvidia_model": settings.MODELS["nvidia_nim"]["audio_model"],
                             "detected_anomalies": anomalies,
                             "acoustic_deepfake_score": deepfake_score
                         }
@@ -271,7 +271,7 @@ class VoiceAuthenticityAgent(BaseAgent):
             )
 
             payload = {
-                "model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
+                "model": settings.MODELS["nvidia_nim"]["audio_model"],
                 "messages": [
                     {
                         "role": "user",

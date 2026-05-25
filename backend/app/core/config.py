@@ -1,9 +1,30 @@
 import os
+import json
 from typing import List, Dict, Any
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+def load_models_list() -> Dict[str, Any]:
+    try:
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        json_path = os.path.join(current_dir, "models_list.json")
+        if os.path.exists(json_path):
+            with open(json_path, "r") as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return {
+        "nvidia_nim": {
+            "vlm_model": "meta/llama-3.2-11b-vision-instruct",
+            "audio_model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning"
+        },
+        "local": {
+            "face_biometric_model_buffalo": "buffalo_l"
+        }
+    }
+
 class Settings(BaseSettings):
+    MODELS: Dict[str, Any] = load_models_list()
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

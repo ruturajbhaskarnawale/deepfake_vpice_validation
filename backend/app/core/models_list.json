@@ -1,0 +1,9 @@
+{
+  "nvidia_nim": {
+    "vlm_model": "meta/llama-3.2-11b-vision-instruct",
+    "audio_model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning"
+  },
+  "local": {
+    "face_biometric_model_buffalo": "buffalo_l"
+  }
+}

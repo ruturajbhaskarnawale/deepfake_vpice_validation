@@ -10,6 +10,7 @@ import hashlib
 from typing import Any, Dict, List, Optional
 import numpy as np
 from PIL import Image
+from backend.app.core.config import settings
 
 logger = logging.getLogger("sentinel.biometric_service")
 
@@ -28,7 +29,8 @@ class BiometricService:
         if HAS_INSIGHTFACE:
             try:
                 # Initialize InsightFace with ArcFace and RetinaFace providers
-                self.app = FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider'])
+                model_name = settings.MODELS.get("local", {}).get("face_biometric_model_buffalo", "buffalo_l")
+                self.app = FaceAnalysis(name=model_name, providers=['CPUExecutionProvider'])
                 self.app.prepare(ctx_id=0, det_size=(640, 640))
                 logger.info("InsightFace biometric model suite loaded successfully.")
             except Exception as e:

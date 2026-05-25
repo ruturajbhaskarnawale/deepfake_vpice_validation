@@ -147,7 +147,7 @@ class RiskScorerAgent(BaseAgent):
             )
 
             payload = {
-                "model": "meta/llama-3.2-11b-vision-instruct",
+                "model": settings.MODELS["nvidia_nim"]["vlm_model"],
                 "messages": [
                     {
                         "role": "user",
@@ -181,7 +181,11 @@ class RiskScorerAgent(BaseAgent):
                 return self._get_fallback_explanation(signals, score)
 
             response_data = response.json()
-            explanation = response_data["choices"][0]["message"]["content"].strip()
+            content = response_data.get("choices", [{}])[0].get("message", {}).get("content")
+            if not content:
+                logger.error(f"NVIDIA NIM risk scorer returned empty or null content choice. Response payload: {response_data}")
+                return self._get_fallback_explanation(signals, score)
+            explanation = content.strip()
             return explanation
 
         except Exception as e:

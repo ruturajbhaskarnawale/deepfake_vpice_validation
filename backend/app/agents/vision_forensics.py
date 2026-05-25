@@ -255,7 +255,7 @@ class VisionForensicsAgent(BaseAgent):
             )
 
             payload = {
-                "model": "meta/llama-3.2-11b-vision-instruct",
+                "model": settings.MODELS["nvidia_nim"]["vlm_model"],
                 "messages": [
                     {
                         "role": "user",
@@ -345,7 +345,7 @@ class VisionForensicsAgent(BaseAgent):
                     severity="CRITICAL" if deepfake_score > 0.75 else "HIGH",
                     description=f"NVIDIA NIM visual forensics flagged image '{filename}' as synthetic deepfake. Anomalies: {', '.join(anomalies)}",
                     evidence_payload={
-                        "nvidia_model": "meta/llama-3.2-11b-vision-instruct",
+                        "nvidia_model": settings.MODELS["nvidia_nim"]["vlm_model"],
                         "detected_anomalies": anomalies,
                         "vlm_deepfake_score": deepfake_score
                     }
@@ -359,7 +359,7 @@ class VisionForensicsAgent(BaseAgent):
                     severity="HIGH",
                     description=f"NVIDIA NIM liveness verification failed for '{filename}'. The portrait exhibits high probability of photo/screen spoofing.",
                     evidence_payload={
-                        "nvidia_model": "meta/llama-3.2-11b-vision-instruct",
+                        "nvidia_model": settings.MODELS["nvidia_nim"]["vlm_model"],
                         "liveness_confidence": liveness_score,
                         "spoof_severity": 1.0 - liveness_score
                     }

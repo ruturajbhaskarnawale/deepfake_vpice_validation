@@ -60,7 +60,7 @@ class AudioService:
                 "Do not output any other text besides the JSON block."
             )
             payload = {
-                "model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
+                "model": settings.MODELS["nvidia_nim"]["audio_model"],
                 "messages": [
                     {
                         "role": "user",

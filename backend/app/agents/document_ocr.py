@@ -296,7 +296,7 @@ class DocumentOCRAgent(BaseAgent):
             )
 
             payload = {
-                "model": "meta/llama-3.2-11b-vision-instruct",
+                "model": settings.MODELS["nvidia_nim"]["vlm_model"],
                 "messages": [
                     {
                         "role": "user",
@@ -375,7 +375,7 @@ class DocumentOCRAgent(BaseAgent):
                     severity="CRITICAL" if tamper_score > 0.75 else "HIGH",
                     description=f"NVIDIA NIM VLM layout forensics detected tampering in '{filename}': {evidence_summary}",
                     evidence_payload={
-                        "nvidia_model": "meta/llama-3.2-11b-vision-instruct",
+                        "nvidia_model": settings.MODELS["nvidia_nim"]["vlm_model"],
                         "layout_anomalies": anomalies,
                         "vlm_tamper_score": tamper_score
                     }
