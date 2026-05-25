@@ -84,11 +84,11 @@ class GraphService:
                     # Query to find different cases sharing same face embedding
                     result = session.run(
                         "MATCH (i:Identity)-[:HAS_FACE]->(f:FaceEmbedding) "
-                        "WHERE f.hash IN $face_hashes AND i.case_id <> $case_id AND i.name <> $current_name "
+                        "WHERE f.hash IN $face_hashes AND i.case_id <> $case_id AND toLower(i.name) <> toLower($current_name) "
                         "RETURN i.case_id AS case_id, i.name AS name, f.hash AS hash, 'FACE' AS match_type "
                         "UNION "
                         "MATCH (i:Identity)-[:HAS_VOICE]->(v:VoiceEmbedding) "
-                        "WHERE v.hash IN $voice_hashes AND i.case_id <> $case_id AND i.name <> $current_name "
+                        "WHERE v.hash IN $voice_hashes AND i.case_id <> $case_id AND toLower(i.name) <> toLower($current_name) "
                         "RETURN i.case_id AS case_id, i.name AS name, v.hash AS hash, 'VOICE' AS match_type",
                         face_hashes=face_hashes, voice_hashes=voice_hashes,
                         case_id=case_id, current_name=current_name
@@ -121,7 +121,7 @@ class GraphService:
                         
                     payload = c.ocr_payload or {}
                     hist_name = payload.get("full_name")
-                    if not hist_name or hist_name == current_name:
+                    if not hist_name or hist_name.lower() == current_name.lower():
                         continue
                         
                     hist_faces = payload.get("face_embeddings_hashes", [])

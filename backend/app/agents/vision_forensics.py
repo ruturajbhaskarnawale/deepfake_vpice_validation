@@ -67,24 +67,24 @@ class VisionForensicsAgent(BaseAgent):
                         severity="HIGH",
                         description=f"Active liveness challenge-response verification failed for video '{os.path.basename(file_path)}'. Expected movement patterns not detected.",
                         evidence_payload={
-                            "engine": "MediaPipe-Liveness",
+                            "engine": settings.MODELS.get("local", {}).get("video_liveness_model", "MediaPipe-Liveness"),
                             "active_liveness_score": active_liveness["active_liveness_score"],
                             "blinks_count": active_liveness["blinks_count"]
                         }
                     ))
 
-                if temporal_forensics["deepfake_score"] > 0.4:
+                if temporal_forensics["deepfake_score"] > 0.95:
                     signals.append(ThreatSignal(
                         engine_name=self.name,
                         category=ThreatCategory.DEEPFAKE_IMAGE,
                         confidence_score=temporal_forensics["deepfake_score"],
-                        severity="CRITICAL" if temporal_forensics["deepfake_score"] > 0.75 else "HIGH",
+                        severity="CRITICAL",
                         description=(
                             f"Video deepfake forensics flagged '{os.path.basename(file_path)}' as synthetic. "
                             f"Anomalies: {', '.join(temporal_forensics['detected_anomalies'])}."
                         ),
                         evidence_payload={
-                            "engine": "TimeSformer-XCLIP",
+                            "engine": settings.MODELS.get("local", {}).get("video_deepfake_model", "TimeSformer-XCLIP"),
                             "deepfake_score": temporal_forensics["deepfake_score"],
                             "detected_anomalies": temporal_forensics["detected_anomalies"],
                             "temporal_consistency": temporal_forensics["temporal_consistency"]
@@ -131,7 +131,7 @@ class VisionForensicsAgent(BaseAgent):
                                 f"does not match the selfie image '{os.path.basename(selfie_path)}' (Similarity: {sim:.2f})."
                             ),
                             evidence_payload={
-                                "engine": "InsightFace-ArcFace",
+                                "engine": settings.MODELS.get("local", {}).get("face_matching_model", "InsightFace-ArcFace"),
                                 "video_file": os.path.basename(file_path),
                                 "selfie_file": os.path.basename(selfie_path),
                                 "similarity_score": sim,
@@ -146,6 +146,14 @@ class VisionForensicsAgent(BaseAgent):
 
             # Run local biometric face localization & passive liveness verification on image/extracted frame
             detected_faces = self.biometric_service.detect_face(target_file)
+            
+            if detected_faces and "debug_image_path" in detected_faces[0]:
+                debug_path = detected_faces[0]["debug_image_path"]
+                if "debug_images" not in context:
+                    context["debug_images"] = []
+                if debug_path not in context["debug_images"]:
+                    context["debug_images"].append(debug_path)
+            
             liveness_data = self.biometric_service.verify_passive_liveness(target_file)
             
             # Generate stable ArcFace representation hash
@@ -162,7 +170,7 @@ class VisionForensicsAgent(BaseAgent):
                     severity="HIGH",
                     description=f"Local passive liveness verification failed for '{filename}'. Detected spoof category: {liveness_data['spoof_type']}.",
                     evidence_payload={
-                        "engine": "SilentFace-Liveness",
+                        "engine": settings.MODELS.get("local", {}).get("face_liveness_model", "SilentFace-Liveness"),
                         "liveness_score": liveness_data["liveness_score"],
                         "spoof_type": liveness_data["spoof_type"]
                     }
@@ -211,13 +219,53 @@ class VisionForensicsAgent(BaseAgent):
                 
             cap = cv2.VideoCapture(file_path)
             if not cap.isOpened():
-                logger.error(f"OpenCV could not open video file: {file_path}")
+                logger.error(f"OpenCV could not open video file: {file_path}. Attempting ffmpeg fallback.")
+                # ffmpeg fallback
+                try:
+                    import subprocess
+                    ffmpeg_bin = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "bin", "ffmpeg.exe"))
+                    if not os.path.exists(ffmpeg_bin):
+                        ffmpeg_bin = "ffmpeg"
+                    ffmpeg_cmd = [
+                        ffmpeg_bin, "-y", "-i", file_path,
+                        "-ss", "00:00:01", "-vframes", "1",
+                        "-vf", "scale=640:480",
+                        out_path
+                    ]
+                    logger.info(f"Running ffmpeg fallback command: {' '.join(ffmpeg_cmd)}")
+                    result = subprocess.run(ffmpeg_cmd, capture_output=True, text=True)
+                    if result.returncode == 0 and os.path.exists(out_path):
+                        logger.info(f"Successfully extracted video frame via ffmpeg fallback: {out_path}")
+                        return out_path
+                except Exception as e:
+                    logger.error(f"Exception during ffmpeg fallback: {str(e)}")
                 return None
                 
             frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
             if frame_count <= 0:
-                logger.error(f"Invalid frame count ({frame_count}) for video: {file_path}")
+                logger.error(f"Invalid frame count ({frame_count}) for video: {file_path}. Attempting ffmpeg fallback.")
                 cap.release()
+                # ffmpeg fallback: extract first frame as PNG
+                try:
+                    import subprocess
+                    ffmpeg_bin = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "bin", "ffmpeg.exe"))
+                    if not os.path.exists(ffmpeg_bin):
+                        ffmpeg_bin = "ffmpeg"
+                    ffmpeg_cmd = [
+                        ffmpeg_bin, "-y", "-i", file_path,
+                        "-ss", "00:00:01", "-vframes", "1",
+                        "-vf", "scale=640:480",
+                        out_path
+                    ]
+                    logger.info(f"Running ffmpeg fallback command: {' '.join(ffmpeg_cmd)}")
+                    result = subprocess.run(ffmpeg_cmd, capture_output=True, text=True)
+                    if result.returncode == 0 and os.path.exists(out_path):
+                        logger.info(f"Successfully extracted video frame via ffmpeg fallback: {out_path}")
+                        return out_path
+                    else:
+                        logger.error(f"ffmpeg fallback failed (code {result.returncode}): {result.stderr}")
+                except Exception as e:
+                    logger.error(f"Exception during ffmpeg fallback: {str(e)}")
                 return None
                 
             # Seek to middle frame
@@ -262,6 +310,9 @@ class VisionForensicsAgent(BaseAgent):
             prompt = (
                 "You are an expert AI visual forensic analyst. Inspect the portrait region of this document or selfie image. "
                 "1) Search for GAN/Diffusion artifacts, smoothed skin borders, distorted eyes, asymmetrical structures, or background warping. "
+                "BE HIGHLY CONSERVATIVE. Modern smartphone cameras apply aggressive beauty filters, skin smoothing, and HDR warping naturally. "
+                "DO NOT flag an image as a synthetic deepfake simply because it has smoothed skin or minor distortions. "
+                "ONLY assign a high deepfake_score if you detect undeniable, physically impossible GAN artifacts or explicit digital injection. "
                 "2) Estimate the biometric age and gender. "
                 "3) Output your findings in raw JSON format inside ```json ... ``` with keys: "
                 "'biometric_findings' (object containing: estimated_age (integer), estimated_gender (string)), "
@@ -286,46 +337,29 @@ class VisionForensicsAgent(BaseAgent):
                 "temperature": 0.2
             }
 
-            response = None
-            max_retries = 3
-            for attempt in range(max_retries):
-                try:
-                    async with httpx.AsyncClient(timeout=60.0) as client:
-                        response = await client.post(
-                            "https://integrate.api.nvidia.com/v1/chat/completions",
-                            headers=headers,
-                            json=payload
-                        )
-                    if response.status_code == 200:
-                        break
-                    logger.warning(f"NVIDIA NIM error ({response.status_code}) on attempt {attempt + 1}: {response.text}")
-                except httpx.HTTPError as exc:
-                    logger.warning(f"HTTP connection/timeout error on attempt {attempt + 1}: {str(exc)}")
-                
-                if attempt < max_retries - 1:
-                    await asyncio.sleep(2 * (attempt + 1))
-            
-            if not response or response.status_code != 200:
+            response, used_model = await self._call_nvidia_nim_with_fallback("vision_forensics", headers, payload)
+            if not response:
                 logger.error("NVIDIA NIM Deepfake Forensics API execution failed after multiple retry attempts.")
                 return [], None
 
             response_data = response.json()
-            content = response_data.get("choices", [{}])[0].get("message", {}).get("content")
+            msg = response_data.get("choices", [{}])[0].get("message", {})
+            content = msg.get("content")
+            if not content:
+                content = msg.get("reasoning_content") or msg.get("reasoning")
+                
             if not content:
                 logger.error(f"NVIDIA NIM Deepfake Forensics API returned empty or null content choice. Response payload: {response_data}")
                 return [], None
             
-            json_match = re.search(r"```json\s*(.*?)\s*```", content, re.DOTALL)
-            json_text = json_match.group(1) if json_match else content
-            
-            try:
-                data = json.loads(json_text)
-            except json.JSONDecodeError:
+            data = self._extract_json(content)
+            if not data:
                 logger.warning("Failed to parse JSON from NVIDIA NIM response. Attempting markdown parsing recovery...")
                 data = self._parse_non_json_forensics(content)
                 if not data:
                     data = {}
-                logger.info("Successfully handled forensics data recovery from markdown/conversational response!")
+                else:
+                    logger.info("Successfully handled forensics data recovery from markdown/conversational response!")
             
             biometrics = data.get("biometric_findings", {})
             
@@ -354,12 +388,12 @@ class VisionForensicsAgent(BaseAgent):
             signals = []
             filename = os.path.basename(file_path)
             
-            if deepfake_score > 0.4:
+            if deepfake_score > 0.95:
                 signals.append(ThreatSignal(
                     engine_name=self.name,
                     category=ThreatCategory.DEEPFAKE_IMAGE,
                     confidence_score=deepfake_score,
-                    severity="CRITICAL" if deepfake_score > 0.75 else "HIGH",
+                    severity="CRITICAL",
                     description=f"NVIDIA NIM visual forensics flagged image '{filename}' as synthetic deepfake. Anomalies: {', '.join(anomalies)}",
                     evidence_payload={
                         "nvidia_model": settings.MODELS["nvidia_nim"]["vlm_model"],

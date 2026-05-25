@@ -125,6 +125,28 @@ class BiometricService:
                         for face in faces
                     ]
                     logger.info(f"InsightFace detected {len(detected)} face(s).")
+                    
+                    # Generate and save debug image with markings
+                    try:
+                        debug_img = img.copy()
+                        for face in detected:
+                            box = face["box"]
+                            cv2.rectangle(debug_img, (box[0], box[1]), (box[2], box[3]), (0, 255, 0), 2)
+                        
+                        dir_name = os.path.dirname(file_path)
+                        debug_name = f"debug_{os.path.basename(file_path)}"
+                        debug_path = os.path.join(dir_name, debug_name)
+                        cv2.imwrite(debug_path, debug_img)
+                        logger.info(f"Saved debug face markings to {debug_path}")
+                        
+                        # We return the debug_path in a special internal structure if possible,
+                        # but detect_face returns a List[Dict]. We can inject the debug_path into the first dict.
+                        if detected:
+                            detected[0]["debug_image_path"] = debug_path
+                            
+                    except Exception as e:
+                        logger.warning(f"Failed to save debug face markings: {e}")
+                        
                     return detected if detected else default_faces
             except Exception as exc:
                 logger.error(f"Error during InsightFace detection: {exc}")

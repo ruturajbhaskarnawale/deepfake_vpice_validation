@@ -171,6 +171,7 @@ class CentralOrchestrator:
             ocr_payload["voice_demographics"] = context.get("voice_demographics")
             case.ocr_payload = ocr_payload
             case.sanitized_files = context.get("sanitized_files", [])
+            case.debug_images = context.get("debug_images", [])
             case.status = JobStatus.COMPLETED
             await db.commit()
 

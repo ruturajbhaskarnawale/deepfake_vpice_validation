@@ -1,9 +1,44 @@
 {
-  "nvidia_nim": {
-    "vlm_model": "meta/llama-3.2-11b-vision-instruct",
-    "audio_model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning"
-  },
-  "local": {
-    "face_biometric_model_buffalo": "buffalo_l"
-  }
+    "nvidia_nim": {
+        "vlm_model": "meta/llama-3.2-11b-vision-instruct",
+        "audio_model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning"
+    },
+    "local": {
+        "face_biometric_model_buffalo": "buffalo_l",
+        "face_liveness_model": "SilentFace-Liveness",
+        "face_matching_model": "InsightFace-ArcFace",
+        "video_liveness_model": "MediaPipe-Liveness",
+        "video_deepfake_model": "TimeSformer-XCLIP",
+        "audio_authenticity_model": "AASIST-v2-Spectral"
+    },
+    "ocr": {
+        "primary": "meta/llama-3.2-11b-vision-instruct",
+        "secondary": "nvidia/neva-22b",
+        "fallback": "meta/llama-3.2-11b-vision-instruct"
+    },
+    "vision_forensics": {
+        "primary": "meta/llama-3.2-11b-vision-instruct",
+        "secondary": "nvidia/neva-22b",
+        "fallback": "meta/llama-3.2-11b-vision-instruct"
+    },
+    "voice_authenticity": {
+        "primary": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
+        "secondary": "nvidia/nemotron-4-340b-instruct",
+        "fallback": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning"
+    },
+    "speech_to_text": {
+        "primary": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
+        "secondary": "nvidia/whisper-large-v3",
+        "fallback": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning"
+    },
+    "identity_graph": {
+        "primary": "meta/llama-3.2-11b-vision-instruct",
+        "secondary": "nvidia/nemotron-4-340b-instruct",
+        "fallback": "meta/llama-3.2-11b-vision-instruct"
+    },
+    "risk_scorer": {
+        "primary": "meta/llama-3.2-11b-vision-instruct",
+        "secondary": "nvidia/nemotron-4-340b-instruct",
+        "fallback": "meta/llama-3.2-11b-vision-instruct"
+    }
 }

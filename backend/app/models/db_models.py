@@ -15,6 +15,7 @@ class Case(Base):
     status: Mapped[JobStatus] = mapped_column(SQLEnum(JobStatus), default=JobStatus.PENDING)
     files_received: Mapped[List[str]] = mapped_column(JSON, default=list)
     sanitized_files: Mapped[List[str]] = mapped_column(JSON, default=list)
+    debug_images: Mapped[List[str]] = mapped_column(JSON, default=list)
     ocr_payload: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

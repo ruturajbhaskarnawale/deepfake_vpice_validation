@@ -19,7 +19,42 @@ def load_models_list() -> Dict[str, Any]:
             "audio_model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning"
         },
         "local": {
-            "face_biometric_model_buffalo": "buffalo_l"
+            "face_biometric_model_buffalo": "buffalo_l",
+            "face_liveness_model": "SilentFace-Liveness",
+            "face_matching_model": "InsightFace-ArcFace",
+            "video_liveness_model": "MediaPipe-Liveness",
+            "video_deepfake_model": "TimeSformer-XCLIP",
+            "audio_authenticity_model": "AASIST-v2-Spectral"
+        },
+        "ocr": {
+            "primary": "meta/llama-3.2-11b-vision-instruct",
+            "secondary": "nvidia/neva-22b",
+            "fallback": "local_heuristic_ocr"
+        },
+        "vision_forensics": {
+            "primary": "meta/llama-3.2-11b-vision-instruct",
+            "secondary": "nvidia/neva-22b",
+            "fallback": "SilentFace-Liveness"
+        },
+        "voice_authenticity": {
+            "primary": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
+            "secondary": "nvidia/nemotron-4-340b-instruct",
+            "fallback": "AASIST-v2-Spectral"
+        },
+        "speech_to_text": {
+            "primary": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
+            "secondary": "nvidia/whisper-large-v3",
+            "fallback": "local_dummy_transcription"
+        },
+        "identity_graph": {
+            "primary": "meta/llama-3.2-11b-vision-instruct",
+            "secondary": "nvidia/nemotron-4-340b-instruct",
+            "fallback": "local_graph_service_heuristics"
+        },
+        "risk_scorer": {
+            "primary": "meta/llama-3.2-11b-vision-instruct",
+            "secondary": "nvidia/nemotron-4-340b-instruct",
+            "fallback": "local_rule_scorer_heuristics"
         }
     }
 

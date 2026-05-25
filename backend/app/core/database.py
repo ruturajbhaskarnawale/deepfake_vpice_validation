@@ -53,3 +53,9 @@ async def init_db() -> None:
             await conn.execute(text("ALTER TABLE cases ADD COLUMN ocr_payload JSON DEFAULT '{}';"))
         except Exception:
             pass
+
+        # Add debug_images column if it's missing
+        try:
+            await conn.execute(text("ALTER TABLE cases ADD COLUMN debug_images JSON DEFAULT '[]';"))
+        except Exception:
+            pass

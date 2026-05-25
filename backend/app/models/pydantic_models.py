@@ -95,6 +95,7 @@ class JobResponse(BaseModel):
     status: JobStatus
     files_received: List[str]
     sanitized_files: List[str] = Field(default_factory=list)
+    debug_images: List[str] = Field(default_factory=list)
     evidence: Optional[EvidencePackage] = None
     created_at: datetime
     updated_at: datetime

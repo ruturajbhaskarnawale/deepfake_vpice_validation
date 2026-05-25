@@ -31,7 +31,7 @@ class VoiceAuthenticityAgent(BaseAgent):
         sanitized_files = context.get("sanitized_files", [])
         voice_embeddings = context.get("voice_embeddings_hashes", [])
         
-        for file_path in sanitized_files:
+        for file_path in list(sanitized_files):
             is_video = file_path.lower().endswith((".mp4", ".webm"))
             if not file_path.lower().endswith((".wav", ".mp3", ".mp4", ".webm")):
                 continue
@@ -44,13 +44,12 @@ class VoiceAuthenticityAgent(BaseAgent):
             temp_wav_path = None
             audio_source_path = file_path
             
-            if is_video:
-                logger.info(f"Extracting audio track from video '{filename}'...")
-                temp_wav_path = await self._extract_audio_from_video(file_path)
-                if temp_wav_path:
-                    audio_source_path = temp_wav_path
-                else:
-                    logger.warning(f"Could not extract audio track from video '{filename}' via FFmpeg. Falling back to simulated spectrogram.")
+            logger.info(f"Standardizing audio track for '{filename}'...")
+            temp_wav_path = await self._standardize_audio_to_wav(file_path)
+            if temp_wav_path:
+                audio_source_path = temp_wav_path
+            else:
+                logger.warning(f"Could not standardize audio track for '{filename}' via FFmpeg.")
             
             try:
                 # 1. Speech Transcription & Demographic Extraction via local service
@@ -100,12 +99,13 @@ class VoiceAuthenticityAgent(BaseAgent):
                 logger.info(f"Invoking nvidia/nemotron-3-nano-omni-30b-a3b-reasoning for acoustic voice diagnostics on '{filename}'...")
                 deepfake_score, anomalies, summary = await self._invoke_nvidia_nim_voice(audio_source_path)
                 
-                if deepfake_score > 0.4:
+                # User requested less sensitivity for synthetic voice triggers on real audio
+                if deepfake_score > 0.95:
                     signals.append(ThreatSignal(
                         engine_name=self.name,
                         category=ThreatCategory.SYNTHETIC_VOICE,
                         confidence_score=deepfake_score,
-                        severity="CRITICAL" if deepfake_score > 0.75 else "HIGH",
+                        severity="CRITICAL",
                         description=f"NVIDIA NIM Nemotron-3 Omni acoustic analysis flagged '{filename}' as synthetic: {summary}",
                         evidence_payload={
                             "nvidia_model": settings.MODELS["nvidia_nim"]["audio_model"],
@@ -123,9 +123,9 @@ class VoiceAuthenticityAgent(BaseAgent):
         context["voice_embeddings_hashes"] = voice_embeddings
         return signals
 
-    async def _extract_audio_from_video(self, video_path: str) -> str | None:
+    async def _standardize_audio_to_wav(self, video_path: str) -> str | None:
         """
-        Attempts to extract the audio track from a video file into a temporary WAV file using FFmpeg.
+        Attempts to extract and standardize the audio track from a media file into a temporary WAV file using FFmpeg.
         Returns the path to the temporary WAV file if successful, or None if FFmpeg fails or is not found.
         """
         try:
@@ -262,7 +262,9 @@ class VoiceAuthenticityAgent(BaseAgent):
             prompt = (
                 "You are an expert AI audio forensic analyst. Listen to this audio recording carefully. "
                 "1) Analyze the speech acoustics to determine if it is a real, natural human voice or a synthetic/cloned Text-to-Speech (TTS) voice. "
-                "Look for robotic modulation, phase patterns typical of vocoders, unnaturally uniform pitch transitions, or missing ambient room breathing. "
+                "BE HIGHLY CONSERVATIVE. Modern smartphone microphones naturally gate out breathing noises, and users reading scripts may have monotone pitch. "
+                "DO NOT flag an audio as synthetic simply because it lacks breathing or has flat pitch. "
+                "ONLY assign a high deepfake_score if you detect definitive digital glitches, robotic jitter, severe vocoder phase artifacts, or unmistakable TTS mechanical generation. "
                 "2) Output your complete forensic analysis in raw JSON format inside ```json ... ``` with keys: "
                 "'deepfake_score' (float between 0.0 and 1.0 representing synthetic/cloned probability), "
                 "'evidence_summary' (string describing acoustic and vocal observations), "
@@ -291,44 +293,27 @@ class VoiceAuthenticityAgent(BaseAgent):
                 "temperature": 0.0
             }
 
-            response = None
-            max_retries = 3
-            for attempt in range(max_retries):
-                try:
-                    async with httpx.AsyncClient(timeout=60.0) as client:
-                        response = await client.post(
-                            "https://integrate.api.nvidia.com/v1/chat/completions",
-                            headers=headers,
-                            json=payload
-                        )
-                    if response.status_code == 200:
-                        break
-                    logger.warning(f"NVIDIA NIM voice check failed ({response.status_code}) on attempt {attempt + 1}: {response.text}")
-                except httpx.HTTPError as exc:
-                    logger.warning(f"HTTP connection/timeout error on attempt {attempt + 1}: {str(exc)}")
-                
-                if attempt < max_retries - 1:
-                    await asyncio.sleep(2 * (attempt + 1))
-            
-            if not response or response.status_code != 200:
+            response, used_model = await self._call_nvidia_nim_with_fallback("voice_authenticity", headers, payload)
+            if not response:
                 logger.error("NVIDIA NIM Voice API execution failed after multiple retry attempts.")
                 return 0.0, [], "Connection to NIM failed"
 
             response_data = response.json()
-            content = response_data.get("choices", [{}])[0].get("message", {}).get("content")
-            
+            msg = response_data.get("choices", [{}])[0].get("message", {})
+            content = msg.get("content")
+            if not content:
+                content = msg.get("reasoning_content") or msg.get("reasoning")
+                
             if not content:
                 logger.error(f"NVIDIA NIM Voice API returned empty or null content choice. Response payload: {response_data}")
                 return 0.0, [], "Model failed to output textual forensic analysis"
-
-            json_match = re.search(r"```json\s*(.*?)\s*```", content, re.DOTALL)
-            json_text = json_match.group(1) if json_match else content
             
-            try:
-                data = json.loads(json_text)
-            except json.JSONDecodeError:
+            data = self._extract_json(content)
+            if not data:
                 logger.warning("Failed to parse JSON from NVIDIA NIM response. Attempting fallback text parsing...")
                 data = self._parse_non_json_voice(content)
+                if not data:
+                    data = {}
                 
             raw_score = data.get("deepfake_score", 0.0)
             try:

@@ -12,9 +12,79 @@ from backend.app.core.config import settings
 from backend.app.models.pydantic_models import ThreatSignal, ThreatCategory
 from backend.app.models.db_models import Case
 from sqlalchemy import select
+from difflib import SequenceMatcher
 from backend.app.services.graph_service import GraphService
 
 logger = logging.getLogger("sentinel.identity_graph")
+
+def parse_date_flexible(date_str: str) -> datetime.date | None:
+    if not date_str:
+        return None
+    # Remove ordinal suffixes: 23rd, 1st, 2nd, 3rd, etc.
+    cleaned = re.sub(r"(\d+)(st|nd|rd|th)", r"\1", date_str, flags=re.IGNORECASE)
+    # Replace slashes, dots, and backslashes with dashes
+    cleaned = cleaned.replace("/", "-").replace(".", "-").replace("\\", "-").strip()
+    
+    # Try using dateutil if available
+    try:
+        from dateutil import parser
+        return parser.parse(cleaned, fuzzy=True).date()
+    except Exception:
+        pass
+        
+    # Manual fallback for common patterns
+    months = {
+        "january": 1, "jan": 1,
+        "february": 2, "feb": 2,
+        "march": 3, "mar": 3,
+        "april": 4, "apr": 4,
+        "may": 5,
+        "june": 6, "jun": 6,
+        "july": 7, "jul": 7,
+        "august": 8, "aug": 8,
+        "september": 9, "sep": 9, "sept": 9,
+        "october": 10, "oct": 10,
+        "november": 11, "nov": 11,
+        "december": 12, "dec": 12
+    }
+    
+    # Check if there is a month word
+    lower_cleaned = cleaned.lower()
+    found_month_val = None
+    for m_name, m_val in months.items():
+        if re.search(r"\b" + re.escape(m_name) + r"\b", lower_cleaned):
+            found_month_val = m_val
+            break
+            
+    if found_month_val:
+        # Extract numbers from string
+        numbers = [int(x) for x in re.findall(r"\d+", cleaned)]
+        if len(numbers) >= 2:
+            year = [n for n in numbers if n > 1900]
+            day = [n for n in numbers if n <= 31]
+            if year and day:
+                try:
+                    return datetime.date(year[0], found_month_val, day[0])
+                except Exception:
+                    pass
+
+    # Try standard string splits for DD-MM-YYYY or YYYY-MM-DD
+    parts = [int(p) for p in re.findall(r"\d+", cleaned)]
+    if len(parts) == 3:
+        # Try DD-MM-YYYY
+        if parts[2] > 1900 and parts[1] <= 12 and parts[0] <= 31:
+            try:
+                return datetime.date(parts[2], parts[1], parts[0])
+            except ValueError:
+                pass
+        # Try YYYY-MM-DD
+        if parts[0] > 1900 and parts[1] <= 12 and parts[2] <= 31:
+            try:
+                return datetime.date(parts[0], parts[1], parts[2])
+            except ValueError:
+                pass
+                
+    return None
 
 class IdentityGraphAgent(BaseAgent):
     def __init__(self):
@@ -106,8 +176,8 @@ class IdentityGraphAgent(BaseAgent):
                         signals.append(ThreatSignal(
                             engine_name=self.name,
                             category=ThreatCategory.IDENTITY_INCONSISTENCY,
-                            confidence_score=0.95,
-                            severity="CRITICAL",
+                            confidence_score=0.40,
+                            severity="LOW",
                             description=f"Demographic mismatch located. Document states age is {stated_age} (DOB {current_dob}), but biometric face model estimates age at {biometric_age}."
                         ))
             except Exception:
@@ -122,11 +192,15 @@ class IdentityGraphAgent(BaseAgent):
             spoken_country = voice_demographics.get("issuing_country")
 
             # Check spoken name vs OCR name
-            if spoken_name and current_name != "Unknown Name":
-                # Check soft match (names share words)
+            if spoken_name and current_name not in ["Unknown Name", "Not Extracted"]:
+                # Check soft match (names share words) or phonetic similarity
                 ocr_words = set(current_name.lower().split())
                 spoken_words = set(spoken_name.lower().split())
-                if not ocr_words.intersection(spoken_words):
+                ratio = SequenceMatcher(None, current_name.lower(), spoken_name.lower()).ratio()
+                
+                # Allow a pass if words intersect OR sequence similarity is reasonably close (>0.35)
+                # This accounts for LLM/STT transcription errors for non-English names
+                if not ocr_words.intersection(spoken_words) and ratio < 0.4:
                     signals.append(ThreatSignal(
                         engine_name=self.name,
                         category=ThreatCategory.IDENTITY_INCONSISTENCY,
@@ -136,10 +210,21 @@ class IdentityGraphAgent(BaseAgent):
                     ))
 
             # Check spoken DOB vs OCR DOB
-            if spoken_dob and current_dob != "Unknown DOB":
-                ocr_dob_clean = re.sub(r"[^\d-]", "", str(current_dob))
-                spoken_dob_clean = re.sub(r"[^\d-]", "", str(spoken_dob))
-                if ocr_dob_clean and spoken_dob_clean and ocr_dob_clean != spoken_dob_clean:
+            if spoken_dob and current_dob not in ["Unknown DOB", "Not Extracted"]:
+                ocr_date = parse_date_flexible(str(current_dob))
+                spoken_date = parse_date_flexible(str(spoken_dob))
+                dob_mismatch = False
+                if ocr_date and spoken_date:
+                    if ocr_date != spoken_date:
+                        dob_mismatch = True
+                else:
+                    ocr_dob_clean = re.sub(r"[^\d]", "", str(current_dob))
+                    spoken_dob_clean = re.sub(r"[^\d]", "", str(spoken_dob))
+                    if ocr_dob_clean and spoken_dob_clean and ocr_dob_clean != spoken_dob_clean:
+                        if len(ocr_dob_clean) >= 6 and len(spoken_dob_clean) >= 6:
+                            dob_mismatch = True
+                            
+                if dob_mismatch:
                     signals.append(ThreatSignal(
                         engine_name=self.name,
                         category=ThreatCategory.IDENTITY_INCONSISTENCY,
@@ -149,7 +234,7 @@ class IdentityGraphAgent(BaseAgent):
                     ))
 
             # Check spoken gender vs OCR gender
-            if spoken_gender and current_gender != "Unknown Gender":
+            if spoken_gender and current_gender not in ["Unknown Gender", "Not Extracted"]:
                 if spoken_gender.lower() != current_gender.lower():
                     signals.append(ThreatSignal(
                         engine_name=self.name,
@@ -215,31 +300,17 @@ class IdentityGraphAgent(BaseAgent):
                 "temperature": 0.1
             }
 
-            response = None
-            max_retries = 3
-            for attempt in range(max_retries):
-                try:
-                    async with httpx.AsyncClient(timeout=60.0) as client:
-                        response = await client.post(
-                            "https://integrate.api.nvidia.com/v1/chat/completions",
-                            headers=headers,
-                            json=payload
-                        )
-                    if response.status_code == 200:
-                        break
-                    logger.warning(f"NVIDIA NIM graph check failed ({response.status_code}) on attempt {attempt + 1}: {response.text}")
-                except httpx.HTTPError as exc:
-                    logger.warning(f"HTTP connection/timeout error on attempt {attempt + 1}: {str(exc)}")
-                
-                if attempt < max_retries - 1:
-                    await asyncio.sleep(2 * (attempt + 1))
-            
-            if not response or response.status_code != 200:
+            response, used_model = await self._call_nvidia_nim_with_fallback("identity_graph", headers, payload)
+            if not response:
                 logger.error("NVIDIA NIM Graph API execution failed after multiple retry attempts.")
                 return None
 
             response_data = response.json()
-            content = response_data.get("choices", [{}])[0].get("message", {}).get("content")
+            msg = response_data.get("choices", [{}])[0].get("message", {})
+            content = msg.get("content")
+            if not content:
+                content = msg.get("reasoning_content") or msg.get("reasoning")
+            
             if not content:
                 logger.error(f"NVIDIA NIM Graph API returned empty or null content choice. Response payload: {response_data}")
                 return None

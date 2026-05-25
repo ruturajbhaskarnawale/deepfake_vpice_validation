@@ -107,6 +107,7 @@ async def get_case_status_and_evidence(
         status=case.status,
         files_received=[f for f in case.files_received],
         sanitized_files=[sf for sf in case.sanitized_files],
+        debug_images=getattr(case, 'debug_images', []),
         evidence=evidence_pkg,
         created_at=case.created_at,
         updated_at=case.updated_at

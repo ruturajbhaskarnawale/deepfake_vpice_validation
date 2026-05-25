@@ -184,8 +184,8 @@ class DocumentOCRAgent(BaseAgent):
                         ffmpeg_bin = "ffmpeg"
                     ffmpeg_cmd = [
                         ffmpeg_bin, "-y", "-i", file_path,
-                        "-vf", "thumbnail,scale=640:480",
-                        "-frames:v", "1",
+                        "-ss", "00:00:01", "-vframes", "1",
+                        "-vf", "scale=640:480",
                         out_path
                     ]
                     logger.info(f"Running ffmpeg fallback command: {' '.join(ffmpeg_cmd)}")
@@ -286,8 +286,10 @@ class DocumentOCRAgent(BaseAgent):
             prompt = (
                 "You are an expert AI forensic analyst. Analyze this document scan in combination with its extracted OCR text:\n"
                 f"=== Extracted OCR Text ===\n{raw_ocr_text}\n==========================\n\n"
-                "1) Cross-validate the layout. Are there mismatched text alignments, overlapping boxes, fonts inconsistent with the issuing authority, or signs of digital manipulation?\n"
-                "2) Output your findings in raw JSON format inside ```json ... ``` with keys:\n"
+                "1) Extract the demographic fields carefully. The OCR text may contain typos (e.g., 'D0B' instead of 'DOB', or extra characters before 'MALE'). "
+                "Infer the correct date_of_birth, gender, document_number, and issuing_country even if there are typos. If a field is truly missing, use 'Not Extracted'.\n"
+                "2) Cross-validate the layout. Are there mismatched text alignments, overlapping boxes, fonts inconsistent with the issuing authority, or signs of digital manipulation?\n"
+                "3) Output your findings in raw JSON format inside ```json ... ``` with keys:\n"
                 "'extracted_fields' (object containing keys: full_name, date_of_birth, gender, document_number, issuing_country, document_type),\n"
                 "'tamper_score' (float between 0.0 and 1.0 representing layout/font tampering probability),\n"
                 "'evidence_summary' (string describing layout observations),\n"
@@ -310,46 +312,29 @@ class DocumentOCRAgent(BaseAgent):
                 "temperature": 0.2
             }
 
-            response = None
-            max_retries = 3
-            for attempt in range(max_retries):
-                try:
-                    async with httpx.AsyncClient(timeout=60.0) as client:
-                        response = await client.post(
-                            "https://integrate.api.nvidia.com/v1/chat/completions",
-                            headers=headers,
-                            json=payload
-                        )
-                    if response.status_code == 200:
-                        break
-                    logger.warning(f"NVIDIA NIM catalog error ({response.status_code}) on attempt {attempt + 1}: {response.text}")
-                except httpx.HTTPError as exc:
-                    logger.warning(f"HTTP connection error on attempt {attempt + 1}: {str(exc)}")
-                
-                if attempt < max_retries - 1:
-                    await asyncio.sleep(2 * (attempt + 1))
-            
-            if not response or response.status_code != 200:
+            response, used_model = await self._call_nvidia_nim_with_fallback("ocr", headers, payload)
+            if not response:
                 logger.error("NVIDIA NIM VLM API execution failed after multiple retry attempts.")
                 return [], None
 
             response_data = response.json()
-            content = response_data.get("choices", [{}])[0].get("message", {}).get("content")
+            msg = response_data.get("choices", [{}])[0].get("message", {})
+            content = msg.get("content")
+            if not content:
+                content = msg.get("reasoning_content") or msg.get("reasoning")
+                
             if not content:
                 logger.error(f"NVIDIA NIM VLM API returned empty or null content choice. Response payload: {response_data}")
                 return [], None
             
-            json_match = re.search(r"```json\s*(.*?)\s*```", content, re.DOTALL)
-            json_text = json_match.group(1) if json_match else content
-            
-            try:
-                data = json.loads(json_text)
-            except json.JSONDecodeError:
+            data = self._extract_json(content)
+            if not data:
                 logger.warning("Failed to parse JSON from NVIDIA NIM response. Attempting markdown parsing recovery...")
                 data = self._parse_non_json_ocr(content)
                 if not data:
                     data = {}
-                logger.info("Successfully handled OCR data recovery from markdown/conversational response!")
+                else:
+                    logger.info("Successfully handled OCR data recovery from markdown/conversational response!")
             
             raw_score = data.get("tamper_score", 0.0)
             try:

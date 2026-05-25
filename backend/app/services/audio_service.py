@@ -104,7 +104,11 @@ class AudioService:
 
             # Successful response – extract the text content
             resp_json = response.json()
-            content = resp_json.get("choices", [{}])[0].get("message", {}).get("content")
+            msg = resp_json.get("choices", [{}])[0].get("message", {})
+            content = msg.get("content")
+            if not content:
+                content = msg.get("reasoning_content") or msg.get("reasoning")
+                
             if not content:
                 logger.error(f"NVIDIA NIM speech-to-text API returned empty or null content choice. Response payload: {resp_json}")
                 return {"transcript": "", "extracted_fields": {"full_name": None, "date_of_birth": None, "gender": None, "issuing_country": None}}
@@ -114,21 +118,36 @@ class AudioService:
             transcript = ""
             extracted = {"full_name": None, "date_of_birth": None, "gender": None, "issuing_country": None}
             
-            json_str = None
-            # Match ```json ... ```
-            json_match = re.search(r"```json\s*(.*?)\s*```", content, re.DOTALL)
-            if json_match:
-                json_str = json_match.group(1).strip()
-            else:
-                # Fallback to matching first '{' to last '}'
-                brace_match = re.search(r"(\{.*?\})", content, re.DOTALL)
-                if brace_match:
-                    json_str = brace_match.group(1).strip()
-            
-            parsed = False
-            if json_str:
+            def extract_json_local(content_str):
                 try:
-                    data = json.loads(json_str)
+                    return json.loads(content_str.strip())
+                except Exception:
+                    pass
+                match = re.search(r"```json\s*(.*?)\s*```", content_str, re.DOTALL | re.IGNORECASE)
+                if match:
+                    try:
+                        return json.loads(match.group(1).strip())
+                    except Exception:
+                        pass
+                match = re.search(r"```\s*(.*?)\s*```", content_str, re.DOTALL)
+                if match:
+                    try:
+                        return json.loads(match.group(1).strip())
+                    except Exception:
+                        pass
+                start = content_str.find('{')
+                end = content_str.rfind('}')
+                if start != -1 and end != -1 and end > start:
+                    try:
+                        return json.loads(content_str[start:end+1].strip())
+                    except Exception:
+                        pass
+                return {}
+                
+            data = extract_json_local(content)
+            parsed = False
+            if data:
+                try:
                     transcript = data.get("transcript", "")
                     extracted_raw = data.get("extracted_fields", {})
                     extracted = {
@@ -236,5 +255,5 @@ class AudioService:
             "synthetic_score": synthetic_score,
             "is_synthetic": is_synthetic,
             "detected_anomalies": anomalies,
-            "model_version": "AASIST-v2-Spectral"
+            "model_version": settings.MODELS.get("local", {}).get("audio_authenticity_model", "AASIST-v2-Spectral")
         }
