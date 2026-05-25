@@ -95,10 +95,10 @@ class VoiceAuthenticityAgent(BaseAgent):
 
                 if not settings.NVIDIA_APIKEY:
                     logger.error("NVIDIA API Key is missing in configuration settings.")
-                    raise ValueError("NVIDIA API Key is required for spectrogram diagnostics. No mock fallback allowed.")
+                    raise ValueError("NVIDIA API Key is required for voice acoustics diagnostics. No mock fallback allowed.")
 
-                logger.info(f"Invoking meta/llama-3.2-11b-vision-instruct for voice spectrogram diagnostics on '{filename}'...")
-                deepfake_score, anomalies, summary = await self._invoke_nvidia_nim_voice(spec_path)
+                logger.info(f"Invoking nvidia/nemotron-3-nano-omni-30b-a3b-reasoning for acoustic voice diagnostics on '{filename}'...")
+                deepfake_score, anomalies, summary = await self._invoke_nvidia_nim_voice(audio_source_path)
                 
                 if deepfake_score > 0.4:
                     signals.append(ThreatSignal(
@@ -106,11 +106,11 @@ class VoiceAuthenticityAgent(BaseAgent):
                         category=ThreatCategory.SYNTHETIC_VOICE,
                         confidence_score=deepfake_score,
                         severity="CRITICAL" if deepfake_score > 0.75 else "HIGH",
-                        description=f"Audio spectrogram VLM analysis flagged '{filename}' as synthetic: {summary}",
+                        description=f"NVIDIA NIM Nemotron-3 Omni acoustic analysis flagged '{filename}' as synthetic: {summary}",
                         evidence_payload={
-                            "nvidia_model": "meta/llama-3.2-11b-vision-instruct",
+                            "nvidia_model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
                             "detected_anomalies": anomalies,
-                            "vlm_deepfake_score": deepfake_score
+                            "acoustic_deepfake_score": deepfake_score
                         }
                     ))
             finally:
@@ -244,15 +244,15 @@ class VoiceAuthenticityAgent(BaseAgent):
             logger.error(f"Spectrogram generation failed for {file_path}: {str(e)}")
             return False
 
-    async def _invoke_nvidia_nim_voice(self, spec_img_path: str) -> tuple[float, List[str], str]:
+    async def _invoke_nvidia_nim_voice(self, audio_file_path: str) -> tuple[float, List[str], str]:
         """
-        Sends the base64-encoded spectrogram image to NVIDIA NIM for deepfake voice detection.
+        Sends the base64-encoded WAV audio file to NVIDIA's Nemotron-3 Omni audio-multimodal model
+        for direct acoustic deepfake and synthetic voice detection.
         """
         try:
-            with open(spec_img_path, "rb") as image_file:
-                encoded_string = base64.b64encode(image_file.read()).decode("utf-8")
-            
-            data_url = f"data:image/png;base64,{encoded_string}"
+            with open(audio_file_path, "rb") as f:
+                audio_bytes = f.read()
+            encoded_string = base64.b64encode(audio_bytes).decode("utf-8")
 
             headers = {
                 "Authorization": f"Bearer {settings.NVIDIA_APIKEY}",
@@ -260,28 +260,35 @@ class VoiceAuthenticityAgent(BaseAgent):
             }
             
             prompt = (
-                "You are an expert AI audio forensic analyst. Analyze this speech frequency spectrogram image. "
-                "1) Inspect the visual patterns for text-to-speech (TTS) or voice cloning signatures, such as vertical framing lines, checkerboard spectral artifacts, missing glottal pulses, background voice phase grids, or unnatural silence intervals. "
+                "You are an expert AI audio forensic analyst. Listen to this audio recording carefully. "
+                "1) Analyze the speech acoustics to determine if it is a real, natural human voice or a synthetic/cloned Text-to-Speech (TTS) voice. "
+                "Look for robotic modulation, phase patterns typical of vocoders, unnaturally uniform pitch transitions, or missing ambient room breathing. "
                 "2) Output your complete forensic analysis in raw JSON format inside ```json ... ``` with keys: "
                 "'deepfake_score' (float between 0.0 and 1.0 representing synthetic/cloned probability), "
-                "'evidence_summary' (string describing spectral observations), "
+                "'evidence_summary' (string describing acoustic and vocal observations), "
                 "'audio_anomalies' (list of strings listing any detected anomalies). "
                 "Do not output any other text besides the JSON block."
             )
 
             payload = {
-                "model": "meta/llama-3.2-11b-vision-instruct",
+                "model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
                 "messages": [
                     {
                         "role": "user",
                         "content": [
                             {"type": "text", "text": prompt},
-                            {"type": "image_url", "image_url": {"url": data_url}}
+                            {
+                                "type": "input_audio",
+                                "input_audio": {
+                                    "data": encoded_string,
+                                    "format": "wav"
+                                }
+                            }
                         ]
                     }
                 ],
                 "max_tokens": 1024,
-                "temperature": 0.2
+                "temperature": 0.0
             }
 
             response = None
@@ -308,8 +315,12 @@ class VoiceAuthenticityAgent(BaseAgent):
                 return 0.0, [], "Connection to NIM failed"
 
             response_data = response.json()
-            content = response_data["choices"][0]["message"]["content"]
+            content = response_data.get("choices", [{}])[0].get("message", {}).get("content")
             
+            if not content:
+                logger.error(f"NVIDIA NIM Voice API returned empty or null content choice. Response payload: {response_data}")
+                return 0.0, [], "Model failed to output textual forensic analysis"
+
             json_match = re.search(r"```json\s*(.*?)\s*```", content, re.DOTALL)
             json_text = json_match.group(1) if json_match else content
             

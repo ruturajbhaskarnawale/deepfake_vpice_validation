@@ -104,7 +104,10 @@ class AudioService:
 
             # Successful response – extract the text content
             resp_json = response.json()
-            content = resp_json["choices"][0]["message"]["content"]
+            content = resp_json.get("choices", [{}])[0].get("message", {}).get("content")
+            if not content:
+                logger.error(f"NVIDIA NIM speech-to-text API returned empty or null content choice. Response payload: {resp_json}")
+                return {"transcript": "", "extracted_fields": {"full_name": None, "date_of_birth": None, "gender": None, "issuing_country": None}}
             
             # Robust parsing of JSON from the model response
             import json

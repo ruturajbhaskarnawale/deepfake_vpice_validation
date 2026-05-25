@@ -81,6 +81,7 @@
             letter-spacing: 0.05em;
             background: linear-gradient(to right, #ffffff, #9ca3af);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
@@ -189,10 +190,26 @@
             box-shadow: 0 0 10px rgba(6, 182, 212, 0.15);
         }
 
-        .dropzone {
-            border: 2px dashed rgba(255, 255, 255, 0.15);
+        .field-card {
+            background: rgba(255, 255, 255, 0.01);
+            border: 1px solid rgba(255, 255, 255, 0.04);
             border-radius: 0.75rem;
-            padding: 2rem 1.5rem;
+            padding: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .field-card:hover {
+            border-color: rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .field-dropzone {
+            border: 1.5px dashed rgba(255, 255, 255, 0.15);
+            border-radius: 0.5rem;
+            padding: 1.25rem 1rem;
             text-align: center;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -200,55 +217,104 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 0.75rem;
+            gap: 0.35rem;
         }
 
-        .dropzone:hover,
-        .dropzone.dragover {
+        .field-dropzone:hover,
+        .field-dropzone.dragover {
             border-color: var(--accent-cyan);
-            background: rgba(6, 182, 212, 0.03);
+            background: rgba(6, 182, 212, 0.04);
+            box-shadow: 0 0 10px rgba(6, 182, 212, 0.05);
+        }
+        
+        .field-dropzone.has-file {
+            border-color: var(--accent-green);
+            background: rgba(16, 185, 129, 0.03);
+            border-style: solid;
         }
 
         .dropzone-icon {
-            font-size: 2rem;
+            font-size: 1.5rem;
             color: var(--text-secondary);
             transition: transform 0.3s ease;
         }
 
-        .dropzone:hover .dropzone-icon {
-            transform: translateY(-4px);
+        .field-dropzone:hover .dropzone-icon {
+            transform: translateY(-2px);
             color: var(--accent-cyan);
         }
 
-        .dropzone p {
-            font-size: 0.8rem;
-            font-weight: 500;
+        .field-dropzone p {
+            font-size: 0.75rem;
+            font-weight: 600;
             color: var(--text-primary);
         }
 
-        .dropzone span {
-            font-size: 0.7rem;
+        .field-dropzone span {
+            font-size: 0.65rem;
             color: var(--text-secondary);
         }
 
-        .file-list {
-            list-style: none;
+        .field-preview {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            position: relative;
+            margin-top: 0.25rem;
+        }
+        
+        .field-preview-thumb {
+            width: 44px;
+            height: 44px;
+            object-fit: cover;
+            border-radius: 0.25rem;
+            background: #000;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        
+        .field-preview-details {
+            flex: 1;
+            min-width: 0;
             display: flex;
             flex-direction: column;
-            gap: 0.5rem;
-            max-height: 150px;
-            overflow-y: auto;
+            gap: 0.15rem;
+            text-align: left;
         }
-
-        .file-item {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid var(--border-color);
-            border-radius: 0.35rem;
-            padding: 0.5rem 0.75rem;
+        
+        .field-preview-name {
             font-size: 0.75rem;
+            font-weight: 600;
+            color: #ffffff;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .field-preview-size {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+        }
+        
+        .field-preview-remove {
+            background: none;
+            border: none;
+            color: var(--accent-red);
+            font-size: 1rem;
+            cursor: pointer;
+            font-weight: bold;
+            padding: 0.25rem;
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            justify-content: center;
+            transition: transform 0.2s ease;
+        }
+        
+        .field-preview-remove:hover {
+            transform: scale(1.15);
         }
 
         .file-item-name {
@@ -1108,15 +1174,44 @@
                     placeholder="Enter x-api-key">
             </div>
 
-            <div class="form-group">
-                <label>Media Dropzone</label>
-                <div id="dropzone" class="dropzone">
-                    <div class="dropzone-icon">📥</div>
-                    <p>Drag & drop files or tap to upload</p>
-                    <span>PDF, JPG, PNG, WAV, MP3, MP4</span>
-                    <input type="file" id="fileInput" multiple style="display: none;">
+            <!-- Government ID Dropzone -->
+            <div class="form-group field-card">
+                <label>📄 Government ID / Document Scan</label>
+                <div id="docDropzone" class="field-dropzone">
+                    <div class="dropzone-icon">📄</div>
+                    <p>Drag & drop ID scan or tap</p>
+                    <span>PDF, JPG, PNG (Max 50MB)</span>
+                    <input type="file" id="docFileInput" accept=".pdf,.jpg,.jpeg,.png" style="display: none;">
                 </div>
-                <div class="btn-capture-row">
+                <div id="docPreview" class="field-preview" style="display: none;"></div>
+            </div>
+
+            <!-- Selfie Portrait Dropzone -->
+            <div class="form-group field-card">
+                <label>🧑 Selfie / Face Portrait</label>
+                <div id="selfieDropzone" class="field-dropzone">
+                    <div class="dropzone-icon">🧑</div>
+                    <p>Drag & drop selfie or tap</p>
+                    <span>JPG, JPEG, PNG (Max 50MB)</span>
+                    <input type="file" id="selfieFileInput" accept=".jpg,.jpeg,.png" style="display: none;">
+                </div>
+                <div id="selfiePreview" class="field-preview" style="display: none;"></div>
+                <button type="button" id="recordSelfieBtn" class="btn-capture" style="margin-top: 0.25rem;">
+                    <span>📷 Take Webcam Selfie</span>
+                </button>
+            </div>
+
+            <!-- Audio Speech / Video Dropzone -->
+            <div class="form-group field-card">
+                <label>🎙️ Audio Speech / Video Recording</label>
+                <div id="mediaDropzone" class="field-dropzone">
+                    <div class="dropzone-icon">🎙️</div>
+                    <p>Drag & drop WAV, MP3, MP4 or tap</p>
+                    <span>WAV, MP3, MP4, WEBM (Max 50MB)</span>
+                    <input type="file" id="mediaFileInput" accept=".wav,.mp3,.mp4,.webm" style="display: none;">
+                </div>
+                <div id="mediaPreview" class="field-preview" style="display: none;"></div>
+                <div class="btn-capture-row" style="margin-top: 0.25rem;">
                     <button type="button" id="recordAudioBtn" class="btn-capture">
                         <span>🎙️ Record Voice</span>
                     </button>
@@ -1124,31 +1219,16 @@
                         <span>🎥 Record Video</span>
                     </button>
                 </div>
-
-                <!-- Mandatory Inputs Forensic Guide -->
-                <div class="forensic-guide-box"
-                    style="margin-top: 0.75rem; background: rgba(6, 182, 212, 0.04); border: 1px dashed rgba(6, 182, 212, 0.25); border-radius: 0.75rem; padding: 0.75rem 1rem; font-size: 0.72rem; color: var(--text-secondary); line-height: 1.5; text-align: left;">
-                    <span
-                        style="font-weight: 700; color: var(--accent-cyan); display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.35rem; text-transform: uppercase; font-size: 0.65rem; letter-spacing: 0.05em;">💡
-                        Mandatory Ingestion Guide</span>
-                    To trigger full biometric verification and cross-modal demographic checks, please upload or capture
-                    files covering these three areas:
-                    <ul
-                        style="margin-left: 1.15rem; margin-top: 0.35rem; display: flex; flex-direction: column; gap: 0.35rem; list-style-type: disc;">
-                        <li>📄 <strong>Government ID / Document Scan</strong> (Aadhaar, Passport, PAN, DL, Utility Bill)
-                            for OCR and layout forensics.</li>
-                        <li>🧑 <strong>Selfie / Face Portrait</strong> for visual deepfake liveness and
-                            document-to-selfie facial embedding comparison.</li>
-                        <li>🎙️ <strong>Audio Speech / Video</strong> (WAV, MP3, MP4) for speaker verification and
-                            synthetic voice screening.<br><span
-                                style="color: var(--accent-orange); font-size: 0.65rem; font-weight: 600;">⚠️ Mobile
-                                Note: Real-time recording requires a secure origin (HTTPS ngrok tunnel or USB tethered
-                                localhost) on mobile browsers.</span></li>
-                    </ul>
-                </div>
             </div>
 
-            <ul id="selectedFiles" class="file-list"></ul>
+            <!-- Mandatory Inputs Forensic Guide -->
+            <div class="forensic-guide-box"
+                style="margin-top: 0.5rem; background: rgba(6, 182, 212, 0.04); border: 1px dashed rgba(6, 182, 212, 0.25); border-radius: 0.75rem; padding: 0.75rem; font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4; text-align: left;">
+                <span
+                    style="font-weight: 700; color: var(--accent-cyan); display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.25rem; text-transform: uppercase; font-size: 0.65rem; letter-spacing: 0.05em;">💡
+                    Mandatory Ingestion Guide</span>
+                To trigger full biometric verification and cross-modal demographic checks, please upload files covering all three fields.
+            </div>
 
             <button id="submitBtn" class="btn-submit" disabled>
                 <span>🚀 Execute Forensic Pipeline</span>
@@ -1316,7 +1396,7 @@
                 cross-referenced with your uploaded documents to detect identity inconsistencies.
             </div>
 
-            <!-- Video Recording Interface -->
+            <!-- Video / Selfie Recording Interface -->
             <div id="videoCaptureContainer" style="display: none; width: 100%;">
                 <div class="webcam-container">
                     <div id="videoRecordIndicator" class="recording-pulse" style="display: none;">
@@ -1324,6 +1404,7 @@
                         <span>REC</span>
                     </div>
                     <video id="webcamPreview" class="webcam-preview mirrored" autoplay playsinline muted></video>
+                    <img id="selfieCapturePreview" style="display: none; width: 100%; height: 100%; object-fit: cover; background: #000;" class="mirrored">
                 </div>
             </div>
 
@@ -1356,14 +1437,28 @@
         </div>
     </div>
     <script>
-        const dropzone = document.getElementById('dropzone');
-        const fileInput = document.getElementById('fileInput');
-        const selectedFilesList = document.getElementById('selectedFiles');
+        const docDropzone = document.getElementById('docDropzone');
+        const docFileInput = document.getElementById('docFileInput');
+        const docPreview = document.getElementById('docPreview');
+
+        const selfieDropzone = document.getElementById('selfieDropzone');
+        const selfieFileInput = document.getElementById('selfieFileInput');
+        const selfiePreview = document.getElementById('selfiePreview');
+        const recordSelfieBtn = document.getElementById('recordSelfieBtn');
+
+        const mediaDropzone = document.getElementById('mediaDropzone');
+        const mediaFileInput = document.getElementById('mediaFileInput');
+        const mediaPreview = document.getElementById('mediaPreview');
+        const recordAudioBtn = document.getElementById('recordAudioBtn');
+        const recordVideoBtn = document.getElementById('recordVideoBtn');
+
         const submitBtn = document.getElementById('submitBtn');
         const consolePanel = document.getElementById('console');
         const connectionStatus = document.getElementById('connectionStatus');
 
-        let uploadQueue = [];
+        let docFile = null;
+        let selfieFile = null;
+        let mediaFile = null;
 
         // Check NIM connectivity on load
         window.addEventListener('load', async () => {
@@ -1380,65 +1475,146 @@
         });
 
         // Trigger file selection
-        dropzone.addEventListener('click', () => fileInput.click());
+        docDropzone.addEventListener('click', () => docFileInput.click());
+        selfieDropzone.addEventListener('click', () => selfieFileInput.click());
+        mediaDropzone.addEventListener('click', () => mediaFileInput.click());
 
-        fileInput.addEventListener('change', (e) => {
-            handleSelectedFiles(e.target.files);
+        docFileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) handleDocFile(e.target.files[0]);
+        });
+        selfieFileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) handleSelfieFile(e.target.files[0]);
+        });
+        mediaFileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) handleMediaFile(e.target.files[0]);
         });
 
-        // Drag events
-        dropzone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropzone.classList.add('dragover');
-        });
-
-        dropzone.addEventListener('dragleave', () => {
-            dropzone.classList.remove('dragover');
-        });
-
-        dropzone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropzone.classList.remove('dragover');
-            handleSelectedFiles(e.dataTransfer.files);
-        });
-
-        function handleSelectedFiles(files) {
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                // Check if already in queue
-                if (!uploadQueue.some(f => f.name === file.name && f.size === file.size)) {
-                    uploadQueue.push(file);
-                }
-            }
-            renderFileList();
-        }
-
-        function removeFile(index) {
-            uploadQueue.splice(index, 1);
-            renderFileList();
-        }
-
-        function renderFileList() {
-            selectedFilesList.innerHTML = '';
-            uploadQueue.forEach((file, index) => {
-                const item = document.createElement('li');
-                item.className = 'file-item';
-
-                const details = document.createElement('div');
-                details.className = 'file-item-name';
-                details.innerHTML = `📄 <span>${file.name}</span> <span style="font-size:0.6rem; color:var(--text-secondary);">(${(file.size / (1024 * 1024)).toFixed(2)} MB)</span>`;
-
-                const removeBtn = document.createElement('button');
-                removeBtn.className = 'file-remove-btn';
-                removeBtn.innerText = '✕';
-                removeBtn.onclick = () => removeFile(index);
-
-                item.appendChild(details);
-                item.appendChild(removeBtn);
-                selectedFilesList.appendChild(item);
+        // Setup drag and drop for each element
+        function setupDragDrop(dropzoneElement, handleFn) {
+            dropzoneElement.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropzoneElement.classList.add('dragover');
             });
 
-            submitBtn.disabled = uploadQueue.length === 0;
+            dropzoneElement.addEventListener('dragleave', () => {
+                dropzoneElement.classList.remove('dragover');
+            });
+
+            dropzoneElement.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropzoneElement.classList.remove('dragover');
+                if (e.dataTransfer.files.length > 0) {
+                    handleFn(e.dataTransfer.files[0]);
+                }
+            });
+        }
+
+        setupDragDrop(docDropzone, handleDocFile);
+        setupDragDrop(selfieDropzone, handleSelfieFile);
+        setupDragDrop(mediaDropzone, handleMediaFile);
+
+        function handleDocFile(file) {
+            const ext = file.name.split('.').pop().toLowerCase();
+            if (!['pdf', 'jpg', 'jpeg', 'png'].includes(ext)) {
+                writeLog(`Invalid document format: ${file.name}. Allowed formats: PDF, JPG, PNG.`, "error");
+                alert("Unsupported document format. Please upload PDF, JPG, JPEG, or PNG.");
+                return;
+            }
+            docFile = file;
+            renderFieldPreview('doc', file);
+            updateSubmitButton();
+        }
+
+        function handleSelfieFile(file) {
+            const ext = file.name.split('.').pop().toLowerCase();
+            if (!['jpg', 'jpeg', 'png'].includes(ext)) {
+                writeLog(`Invalid selfie format: ${file.name}. Allowed formats: JPG, JPEG, PNG.`, "error");
+                alert("Unsupported selfie format. Please upload JPG, JPEG, or PNG.");
+                return;
+            }
+            selfieFile = file;
+            renderFieldPreview('selfie', file);
+            updateSubmitButton();
+        }
+
+        function handleMediaFile(file) {
+            const ext = file.name.split('.').pop().toLowerCase();
+            if (!['wav', 'mp3', 'mp4', 'webm'].includes(ext)) {
+                writeLog(`Invalid media format: ${file.name}. Allowed formats: WAV, MP3, MP4, WEBM.`, "error");
+                alert("Unsupported audio/video format. Please upload WAV, MP3, MP4, or WEBM.");
+                return;
+            }
+            mediaFile = file;
+            renderFieldPreview('media', file);
+            updateSubmitButton();
+        }
+
+        function renderFieldPreview(type, file) {
+            const dropzone = document.getElementById(`${type}Dropzone`);
+            const preview = document.getElementById(`${type}Preview`);
+            
+            dropzone.classList.add('has-file');
+            preview.style.display = 'flex';
+            preview.innerHTML = '';
+            
+            let thumbHtml = '';
+            if (file.type.startsWith('image/')) {
+                const imgUrl = URL.createObjectURL(file);
+                thumbHtml = `<img class="field-preview-thumb" src="${imgUrl}">`;
+            } else if (file.type.startsWith('video/')) {
+                thumbHtml = `<div class="field-preview-thumb" style="display:flex; align-items:center; justify-content:center; font-size:1.25rem;">🎥</div>`;
+            } else if (file.type.startsWith('audio/')) {
+                thumbHtml = `<div class="field-preview-thumb" style="display:flex; align-items:center; justify-content:center; font-size:1.25rem;">🎙️</div>`;
+            } else {
+                thumbHtml = `<div class="field-preview-thumb" style="display:flex; align-items:center; justify-content:center; font-size:1.25rem;">📄</div>`;
+            }
+            
+            const sizeStr = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
+            
+            preview.innerHTML = `
+                ${thumbHtml}
+                <div class="field-preview-details">
+                    <span class="field-preview-name" title="${file.name}">${file.name}</span>
+                    <span class="field-preview-size">${sizeStr}</span>
+                </div>
+                <button class="field-preview-remove" onclick="removeFieldFile('${type}')">✕</button>
+            `;
+            
+            writeLog(`Loaded file for ${type === 'doc' ? 'Government ID' : type === 'selfie' ? 'Selfie Portrait' : 'Audio/Video'}: ${file.name}`, "success");
+        }
+
+        window.removeFieldFile = function(type) {
+            if (type === 'doc') {
+                docFile = null;
+                docFileInput.value = '';
+            } else if (type === 'selfie') {
+                selfieFile = null;
+                selfieFileInput.value = '';
+            } else if (type === 'media') {
+                mediaFile = null;
+                mediaFileInput.value = '';
+            }
+            
+            const dropzone = document.getElementById(`${type}Dropzone`);
+            const preview = document.getElementById(`${type}Preview`);
+            
+            dropzone.classList.remove('has-file');
+            preview.style.display = 'none';
+            preview.innerHTML = '';
+            
+            writeLog(`Removed ${type === 'doc' ? 'Government ID' : type === 'selfie' ? 'Selfie Portrait' : 'Audio/Video'} asset.`);
+            updateSubmitButton();
+        }
+
+        function updateSubmitButton() {
+            submitBtn.disabled = !(docFile || selfieFile || mediaFile);
+            if (docFile && selfieFile && mediaFile) {
+                submitBtn.querySelector('span').innerText = "🚀 Execute Full Forensic Pipeline";
+                submitBtn.style.boxShadow = "0 0 20px rgba(139, 92, 246, 0.4)";
+            } else {
+                submitBtn.querySelector('span').innerText = "🚀 Execute Forensic Pipeline (Partial)";
+                submitBtn.style.boxShadow = "none";
+            }
         }
 
         function writeLog(text, type = "") {
@@ -1472,9 +1648,21 @@
             writeLog("Initiating multi-modal ingestion cycle...", "success");
 
             const formData = new FormData();
-            uploadQueue.forEach(file => {
-                formData.append("files", file);
-            });
+            if (docFile) {
+                const ext = docFile.name.split('.').pop();
+                const newName = `gov_id_scan.${ext}`;
+                formData.append("files", new File([docFile], newName, { type: docFile.type }));
+            }
+            if (selfieFile) {
+                const ext = selfieFile.name.split('.').pop();
+                const newName = `selfie_portrait.${ext}`;
+                formData.append("files", new File([selfieFile], newName, { type: selfieFile.type }));
+            }
+            if (mediaFile) {
+                const ext = mediaFile.name.split('.').pop();
+                const newName = `media_audio_video.${ext}`;
+                formData.append("files", new File([mediaFile], newName, { type: mediaFile.type }));
+            }
 
             try {
                 // 1. Submit Ingestion
@@ -2030,8 +2218,6 @@
 
         // Modal Controls
         const captureModal = document.getElementById('captureModal');
-        const recordAudioBtn = document.getElementById('recordAudioBtn');
-        const recordVideoBtn = document.getElementById('recordVideoBtn');
         const captureModalCloseBtn = document.getElementById('captureModalCloseBtn');
 
         const videoCaptureContainer = document.getElementById('videoCaptureContainer');
@@ -2048,6 +2234,7 @@
 
         recordAudioBtn.addEventListener('click', () => openCaptureModal('audio'));
         recordVideoBtn.addEventListener('click', () => openCaptureModal('video'));
+        recordSelfieBtn.addEventListener('click', () => openCaptureModal('selfie'));
         captureModalCloseBtn.addEventListener('click', closeModal);
 
         captureModal.addEventListener('click', (e) => {
@@ -2059,7 +2246,11 @@
             captureModal.style.display = 'flex';
 
             startCaptureBtn.style.display = 'inline-flex';
-            startCaptureBtn.querySelector('span').innerText = "🔴 Start";
+            if (mode === 'selfie') {
+                startCaptureBtn.querySelector('span').innerText = "📷 Capture Photo";
+            } else {
+                startCaptureBtn.querySelector('span').innerText = "🔴 Start";
+            }
             stopCaptureBtn.style.display = 'none';
             saveCaptureBtn.style.display = 'none';
             captureTimer.style.display = 'none';
@@ -2068,6 +2259,8 @@
             webcamPreview.srcObject = null;
             webcamPreview.src = "";
             webcamPreview.controls = false;
+            webcamPreview.style.display = 'block';
+            document.getElementById('selfieCapturePreview').style.display = 'none';
 
             if (mode === 'audio') {
                 captureModalTitle.innerHTML = '🎙️ Voice Recorder Console';
@@ -2075,13 +2268,20 @@
                 audioCaptureContainer.style.display = 'flex';
                 captureStatusText.innerText = 'Ready to record voice. Click Start.';
                 setupVisualizer();
-            } else {
+            } else if (mode === 'video') {
                 captureModalTitle.innerHTML = '🎥 Webcam Recording Console';
                 videoCaptureContainer.style.display = 'block';
                 audioCaptureContainer.style.display = 'none';
                 captureStatusText.innerText = 'Initializing camera preview...';
                 await startMedia('video');
                 captureStatusText.innerText = 'Camera ready. Click Start.';
+            } else if (mode === 'selfie') {
+                captureModalTitle.innerHTML = '📷 Selfie Snapshot Console';
+                videoCaptureContainer.style.display = 'block';
+                audioCaptureContainer.style.display = 'none';
+                captureStatusText.innerText = 'Initializing camera preview...';
+                await startMedia('video');
+                captureStatusText.innerText = 'Look directly at the camera and click Capture Photo.';
             }
         }
 
@@ -2142,6 +2342,20 @@
         }
 
         startCaptureBtn.addEventListener('click', async () => {
+            if (captureMode === 'selfie') {
+                if (!mediaStream) {
+                    webcamPreview.style.display = 'block';
+                    document.getElementById('selfieCapturePreview').style.display = 'none';
+                    saveCaptureBtn.style.display = 'none';
+                    startCaptureBtn.querySelector('span').innerText = "📷 Capture Photo";
+                    captureStatusText.innerText = 'Initializing camera preview...';
+                    await startMedia('video');
+                    captureStatusText.innerText = 'Look directly at the camera and click Capture Photo.';
+                } else {
+                    takeSelfieSnapshot();
+                }
+                return;
+            }
             if (captureMode === 'audio' && !mediaStream) {
                 await startMedia('audio');
             }
@@ -2164,6 +2378,40 @@
 
             startTimer();
         });
+
+        function takeSelfieSnapshot() {
+            if (!mediaStream) return;
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = webcamPreview.videoWidth || 640;
+            canvas.height = webcamPreview.videoHeight || 480;
+            
+            const ctx = canvas.getContext('2d');
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(webcamPreview, 0, 0, canvas.width, canvas.height);
+            
+            canvas.toBlob((blob) => {
+                recordedBlob = blob;
+                
+                const previewImg = document.getElementById('selfieCapturePreview');
+                previewImg.src = URL.createObjectURL(recordedBlob);
+                
+                webcamPreview.style.display = 'none';
+                previewImg.style.display = 'block';
+                
+                captureStatusText.innerText = 'Snapshot captured successfully!';
+                
+                startCaptureBtn.style.display = 'inline-flex';
+                startCaptureBtn.querySelector('span').innerText = "🔄 Retake";
+                saveCaptureBtn.style.display = 'inline-flex';
+                
+                if (mediaStream) {
+                    mediaStream.getTracks().forEach(track => track.stop());
+                    mediaStream = null;
+                }
+            }, 'image/jpeg', 0.95);
+        }
 
         function startAudioRecording() {
             isRecording = true;
@@ -2295,15 +2543,24 @@
 
             const timestamp = Date.now();
             let file;
-            if (captureMode === 'audio') {
+            if (captureMode === 'selfie') {
+                file = new File([recordedBlob], `captured_selfie_${timestamp}.jpg`, { type: 'image/jpeg' });
+                selfieFile = file;
+                renderFieldPreview('selfie', file);
+                writeLog(`Selfie snapshot successfully saved: ${file.name}`, "success");
+            } else if (captureMode === 'audio') {
                 file = new File([recordedBlob], `voice_record_${timestamp}.wav`, { type: 'audio/wav' });
-            } else {
+                mediaFile = file;
+                renderFieldPreview('media', file);
+                writeLog(`Voice recording successfully saved: ${file.name}`, "success");
+            } else if (captureMode === 'video') {
                 file = new File([recordedBlob], `webcam_record_${timestamp}.mp4`, { type: 'video/mp4' });
+                mediaFile = file;
+                renderFieldPreview('media', file);
+                writeLog(`Webcam video recording successfully saved: ${file.name}`, "success");
             }
 
-            uploadQueue.push(file);
-            renderFileList();
-            writeLog(`Real-time recording successfully added to queue: ${file.name}`, "success");
+            updateSubmitButton();
             closeModal();
         });
 
@@ -2338,6 +2595,12 @@
             webcamPreview.controls = false;
             videoRecordIndicator.style.display = 'none';
             captureTimer.style.display = 'none';
+
+            // Clean up still snapshot preview element
+            const previewImg = document.getElementById('selfieCapturePreview');
+            previewImg.src = "";
+            previewImg.style.display = 'none';
+            webcamPreview.style.display = 'block';
         }
     </script>
 

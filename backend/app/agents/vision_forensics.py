@@ -293,7 +293,10 @@ class VisionForensicsAgent(BaseAgent):
                 return [], None
 
             response_data = response.json()
-            content = response_data["choices"][0]["message"]["content"]
+            content = response_data.get("choices", [{}])[0].get("message", {}).get("content")
+            if not content:
+                logger.error(f"NVIDIA NIM Deepfake Forensics API returned empty or null content choice. Response payload: {response_data}")
+                return [], None
             
             json_match = re.search(r"```json\s*(.*?)\s*```", content, re.DOTALL)
             json_text = json_match.group(1) if json_match else content
