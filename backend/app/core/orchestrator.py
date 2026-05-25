@@ -29,6 +29,8 @@ class CentralOrchestrator:
         self.voice_agent = VoiceAuthenticityAgent()
         self.identity_agent = IdentityGraphAgent()
         self.risk_scorer = RiskScorerAgent()
+        from backend.app.services.biometric_consistency import BiometricConsistencyEngine
+        self.biometric_consistency_engine = BiometricConsistencyEngine()
 
     async def execute_pipeline(self, db: AsyncSession, case_id: UUID) -> Case:
         """
@@ -94,9 +96,31 @@ class CentralOrchestrator:
             vision_signals = await self.vision_agent.process(str(case_id), context)
             all_detected_signals.extend(vision_signals)
 
-            # 2.3 Voice Authenticity / Speaker Verification
             voice_signals = await self.voice_agent.process(str(case_id), context)
             all_detected_signals.extend(voice_signals)
+
+            # 2.4 Biometric Continuity / Consistency Verification
+            selfie_file = None
+            video_file = None
+            for file_p in context.get("sanitized_files", []):
+                fn = os.path.basename(file_p).lower()
+                if file_p.lower().endswith((".jpg", ".jpeg", ".png")):
+                    if "frame" not in fn and "doc_portrait" not in fn and "spectrogram" not in fn:
+                        selfie_file = file_p
+                elif file_p.lower().endswith((".mp4", ".webm")):
+                    video_file = file_p
+
+            if selfie_file and video_file:
+                logger.info(f"Running biometric consistency engine on selfie: {os.path.basename(selfie_file)}, video: {os.path.basename(video_file)}")
+                consistency_signals, continuity_metadata = self.biometric_consistency_engine.process_continuity(selfie_file, video_file)
+                all_detected_signals.extend(consistency_signals)
+                context["face_match_confidence"] = continuity_metadata["face_match_confidence"]
+                context["frame_stability_score"] = continuity_metadata["frame_stability_score"]
+                context["biometric_continuity_metadata"] = continuity_metadata
+            else:
+                context["face_match_confidence"] = 1.0
+                context["frame_stability_score"] = 1.0
+                context["biometric_continuity_metadata"] = {}
 
             # --- STAGE 3: Synthetic Identity Verification ---
             # Evaluates demographic mismatches (stated details vs biometric results) 
@@ -123,7 +147,7 @@ class CentralOrchestrator:
 
             # --- STAGE 4: Risk Scoring & Classification ---
             # Correlate weak/strong patterns and calculate unified Risk Evaluation
-            risk_eval = await self.risk_scorer.evaluate_risk(case_id, all_detected_signals)
+            risk_eval = await self.risk_scorer.evaluate_risk(case_id, all_detected_signals, db=db, context=context)
 
             db_eval = RiskEvaluationDB(
                 id=risk_eval.id,

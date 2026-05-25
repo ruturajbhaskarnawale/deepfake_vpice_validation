@@ -5,6 +5,8 @@ import logging
 import re
 import hashlib
 import asyncio
+import functools
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Dict, List
 from PIL import Image
 import numpy as np
@@ -100,9 +102,24 @@ class VisionForensicsAgent(BaseAgent):
                     context["sanitized_files"].append(target_file)
                 
                 # Perform biometric verification matching video face vs selfie
+                # Run in a thread executor so the heavy InsightFace ONNX load
+                # (first call, ~90s on CPU) does not block the async event loop.
+                loop = asyncio.get_event_loop()
                 for selfie_path in selfies:
-                    match, sim = self.biometric_service.verify_faces_match(target_file, selfie_path)
-                    logger.info(f"Biometric face match between video frame '{os.path.basename(target_file)}' and selfie '{os.path.basename(selfie_path)}': match={match}, similarity={sim:.4f}")
+                    match, sim = await loop.run_in_executor(
+                        None,
+                        functools.partial(
+                            self.biometric_service.verify_faces_match,
+                            target_file,
+                            selfie_path,
+                        ),
+                    )
+                    logger.info(
+                        f"Biometric face match between video frame "
+                        f"'{os.path.basename(target_file)}' and selfie "
+                        f"'{os.path.basename(selfie_path)}': "
+                        f"match={match}, similarity={sim:.4f}"
+                    )
                     if not match:
                         signals.append(ThreatSignal(
                             engine_name=self.name,

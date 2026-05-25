@@ -26,9 +26,29 @@ async def lifespan(app: FastAPI):
         logger.info("Database schemas initialized successfully!")
     except Exception as e:
         logger.error(f"Failed to initialize database: {str(e)}", exc_info=True)
+
+    # Startup: Pre-warm the InsightFace ArcFace biometric model in a background
+    # thread so the ~100s ONNX load happens ONCE at server start, not on the
+    # first user request (which would cause polling timeouts in the frontend).
+    import asyncio
+    loop = asyncio.get_event_loop()
+    def _prewarm_insightface():
+        try:
+            from backend.app.services.biometric_service import _get_shared_app
+            app_instance = _get_shared_app()
+            if app_instance is not None:
+                logger.info("InsightFace ArcFace model pre-warmed successfully at startup.")
+            else:
+                logger.warning("InsightFace pre-warm: model unavailable (will use heuristic fallback).")
+        except Exception as exc:
+            logger.warning(f"InsightFace pre-warm failed: {exc}")
+    loop.run_in_executor(None, _prewarm_insightface)
+    logger.info("InsightFace model pre-warm triggered in background thread.")
+
     yield
     # Shutdown: Clean up any external engine references if needed
     logger.info("Sentinel Core API shutting down...")
+
 
 # Dev API key hint shown in Swagger description
 _DEV_KEY_HINT = (
